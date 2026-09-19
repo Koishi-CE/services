@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@koishi-ce/plugin-am-i-alt",
+  "version": "3.0.0",
+  "description": "Alt account detection service for Koishi",
+  "contributors": [
+    "Oppenheymu <oppenheymu@gmail.com>"
+  ],
+  "type": "module",
+  "main": "lib/index.mjs",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "development": "./src/index.ts",
+      "source": "./src/index.ts",
+      "import": "./lib/index.mjs",
+      "default": "./lib/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "src",
+    "locales"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Koishi-CE/services.git",
+    "directory": "packages/am-i-alt"
+  },
+  "bugs": {
+    "url": "https://github.com/Koishi-CE/services/issues"
+  },
+  "homepage": "https://github.com/Koishi-CE/services/tree/master/packages/am-i-alt",
+  "keywords": [
+    "chatbot",
+    "koishi",
+    "plugin",
+    "anti-abuse",
+    "alt-detection"
+  ],
+  "koishi": {
+    "category": "tool",
+    "description": {
+      "en": "Am I an alt account? Cross-platform alt account check service",
+      "zh": "我是小号吗？提供跨平台小号检查服务"
+    },
+    "service": {
+      "required": [
+        "database"
+      ],
+      "implements": [
+        "amIAlt"
+      ]
+    },
+    "locales": [
+      "zh",
+      "en"
+    ]
+  },
+  "peerDependencies": {
+    "@koishi-ce/koishi": "^1.0.0"
+  },
+  "devDependencies": {
+    "@koishi-ce/koishi": "^1.0.17",
+    "@koishi-ce/plugin-database-memory": "^1.1.1",
+    "@koishi-ce/plugin-mock": "^1.0.0"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "check": "biome check . && tsc --noEmit",
+    "fix": "biome check --write . && tsc --noEmit"
+  }
+}

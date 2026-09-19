@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026-present Oppenheymu and Koishi-CE contributors.
+
+am-i-alt:
+  decision:
+    alt: подозрительный второй аккаунт
+    normal: обычный аккаунт
+    unknown: неизвестно
+  reason:
+    discord-account-age: Возраст аккаунта Discord ниже порога.
+    qq-level: Уровень QQ ниже порога.
+    telegram-id-estimate: Оценка по ID Telegram указывает на новый аккаунт.
+    platform-check-disabled: Проверка для этой платформы отключена.
+    unsupported-platform: Эта платформа пока не поддерживается.
+    missing-session: Сессия отсутствует, проверка невозможна.
+    missing-user-id: Отсутствует ID пользователя.
+    missing-telegram-user-id: Отсутствует ID пользователя Telegram.
+    missing-discord-created-at: Не удалось получить время создания аккаунта Discord.
+    invalid-discord-created-at: Недопустимый формат времени создания Discord.
+    missing-onebot-bot: Не найден доступный бот OneBot.
+    invalid-user-id: Недопустимый ID пользователя.
+    qq-level-fetch-failed: Не удалось получить уровень QQ.
+    telegram-estimate-failed: Не удалось оценить возраст аккаунта Telegram.
+  command:
+    self:
+      result: "Результат: {decision} ({reason})"
+      crossResult: "Кроссплатформенный результат: {decision}"
+      failed: "Ошибка проверки: {message}"
+    target:
+      result: "Результат для {target}: {decision} ({reason})"
+      crossResult: "Кроссплатформенный результат для {target}: {decision}"
+      missing: "Укажите цель: @упоминание или ID пользователя платформы."
+      failed: "Ошибка проверки цели: {message}"
+    crossDetail: "Проверено привязанных аккаунтов: {total} — обычных {normal}, подозрительных {alt}, неизвестных {unknown}."
+  note:
+    telegramHeuristic: Проверка Telegram эвристическая и ненадёжная. Используйте вместе с другими сигналами.

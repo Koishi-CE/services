@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026-present Oppenheymu and Koishi-CE contributors.
+
+am-i-alt:
+  decision:
+    alt: 疑似小號
+    normal: 非小號
+    unknown: 未知
+  reason:
+    discord-account-age: Discord 帳號年齡低於閾值
+    qq-level: QQ 等級低於閾值
+    telegram-id-estimate: Telegram 基於 ID 的模糊估算顯示帳號年齡偏低
+    platform-check-disabled: 當前平台檢測已停用
+    unsupported-platform: 當前平台暫不支援檢測
+    missing-session: 會話為空，無法檢測
+    missing-user-id: 缺少使用者 ID，無法檢測
+    missing-telegram-user-id: 缺少 Telegram 使用者 ID，無法檢測
+    missing-discord-created-at: 無法獲取 Discord 建立時間
+    invalid-discord-created-at: Discord 建立時間格式無效
+    missing-onebot-bot: 未找到可用 OneBot 機器人實例
+    invalid-user-id: 使用者 ID 非法
+    qq-level-fetch-failed: QQ 等級獲取失敗
+    telegram-estimate-failed: Telegram 帳號年齡估算失敗
+  command:
+    self:
+      result: "檢測結果：{decision}（{reason}）"
+      crossResult: "跨平台綜合結果：{decision}"
+      failed: "檢測失敗：{message}"
+    target:
+      result: "目標 {target} 的檢測結果：{decision}（{reason}）"
+      crossResult: "目標 {target} 的跨平台綜合結果：{decision}"
+      missing: "請提供目標使用者：@某人 或 輸入平台使用者 ID。"
+      failed: "目標檢測失敗：{message}"
+    crossDetail: "共檢測 {total} 個綁定帳號：非小號 {normal}，疑似小號 {alt}，未知 {unknown}"
+  note:
+    telegramHeuristic: Telegram 檢測為低可信度估算，請結合其他風控策略

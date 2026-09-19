@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026-present Oppenheymu and Koishi-CE contributors.
+
+am-i-alt:
+  decision:
+    alt: サブアカウントの疑い
+    normal: 正常アカウント
+    unknown: 不明
+  reason:
+    discord-account-age: Discord アカウントの年齢が閾値未満です
+    qq-level: QQ レベルが閾値未満です
+    telegram-id-estimate: Telegram の ID ベース推定でアカウント年齢が低いと判定されました
+    platform-check-disabled: このプラットフォームのチェックは無効です
+    unsupported-platform: このプラットフォームは未対応です
+    missing-session: セッションが存在しないため検出できません
+    missing-user-id: ユーザー ID がないため検出できません
+    missing-telegram-user-id: Telegram ユーザー ID がないため検出できません
+    missing-discord-created-at: Discord の作成時刻を取得できません
+    invalid-discord-created-at: Discord の作成時刻の形式が不正です
+    missing-onebot-bot: 利用可能な OneBot インスタンスが見つかりません
+    invalid-user-id: ユーザー ID が不正です
+    qq-level-fetch-failed: QQ レベルの取得に失敗しました
+    telegram-estimate-failed: Telegram アカウント年齢の推定に失敗しました
+  command:
+    self:
+      result: "判定結果：{decision}（{reason}）"
+      crossResult: "プラットフォーム横断の総合判定：{decision}"
+      failed: "検出に失敗しました：{message}"
+    target:
+      result: "{target} の判定結果：{decision}（{reason}）"
+      crossResult: "{target} の横断総合判定：{decision}"
+      missing: "対象ユーザーを指定してください：@メンション または プラットフォームのユーザー ID。"
+      failed: "対象の検出に失敗しました：{message}"
+    crossDetail: "合計 {total} 件の連携アカウントを検出：正常 {normal} 件、サブアカウントの疑い {alt} 件、不明 {unknown} 件"
+  note:
+    telegramHeuristic: Telegram チェックは低精度の推定です。他の不正対策シグナルと併用してください

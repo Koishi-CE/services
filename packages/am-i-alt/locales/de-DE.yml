@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026-present Oppenheymu and Koishi-CE contributors.
+
+am-i-alt:
+  decision:
+    alt: verdächtiger Zweitaccount
+    normal: normaler Account
+    unknown: unbekannt
+  reason:
+    discord-account-age: Das Discord-Konto ist jünger als der Schwellenwert.
+    qq-level: Die QQ-Stufe liegt unter dem Schwellenwert.
+    telegram-id-estimate: Die ID-basierte Schätzung deutet auf ein neues Telegram-Konto hin.
+    platform-check-disabled: Die Prüfung ist für diese Plattform deaktiviert.
+    unsupported-platform: Diese Plattform wird noch nicht unterstützt.
+    missing-session: Sitzung fehlt, Prüfung nicht möglich.
+    missing-user-id: Benutzer-ID fehlt.
+    missing-telegram-user-id: Telegram-Benutzer-ID fehlt.
+    missing-discord-created-at: Erstellungszeitpunkt des Discord-Kontos nicht lesbar.
+    invalid-discord-created-at: Ungültiger Erstellungszeitpunkt des Discord-Kontos.
+    missing-onebot-bot: Kein verfügbarer OneBot-Bot gefunden.
+    invalid-user-id: Ungültige Benutzer-ID.
+    qq-level-fetch-failed: Abruf der QQ-Stufe fehlgeschlagen.
+    telegram-estimate-failed: Schätzung des Telegram-Kontoalters fehlgeschlagen.
+  command:
+    self:
+      result: "Ergebnis: {decision} ({reason})"
+      crossResult: "Plattformübergreifendes Ergebnis: {decision}"
+      failed: "Prüfung fehlgeschlagen: {message}"
+    target:
+      result: "Ergebnis für {target}: {decision} ({reason})"
+      crossResult: "Plattformübergreifendes Ergebnis für {target}: {decision}"
+      missing: "Bitte Zielbenutzer per @Erwähnung oder Plattform-Benutzer-ID angeben."
+      failed: "Zielprüfung fehlgeschlagen: {message}"
+    crossDetail: "{total} verknüpfte Konten geprüft: normal {normal}, verdächtig {alt}, unbekannt {unknown}."
+  note:
+    telegramHeuristic: Der Telegram-Check ist eine Heuristik mit geringer Konfidenz. Mit weiteren Signalen kombinieren.

@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026-present Oppenheymu and Koishi-CE contributors.
+
+am-i-alt:
+  decision:
+    alt: compte secondaire suspect
+    normal: compte normal
+    unknown: inconnu
+  reason:
+    discord-account-age: L'âge du compte Discord est inférieur au seuil.
+    qq-level: Le niveau QQ est inférieur au seuil.
+    telegram-id-estimate: L'estimation basée sur l'ID Telegram indique un compte récent.
+    platform-check-disabled: La vérification est désactivée pour cette plateforme.
+    unsupported-platform: Cette plateforme n'est pas encore prise en charge.
+    missing-session: Session absente, vérification impossible.
+    missing-user-id: ID utilisateur manquant.
+    missing-telegram-user-id: ID utilisateur Telegram manquant.
+    missing-discord-created-at: Impossible de lire la date de création du compte Discord.
+    invalid-discord-created-at: Date de création Discord invalide.
+    missing-onebot-bot: Aucun bot OneBot disponible.
+    invalid-user-id: ID utilisateur invalide.
+    qq-level-fetch-failed: Échec de la récupération du niveau QQ.
+    telegram-estimate-failed: Échec de l'estimation de l'âge du compte Telegram.
+  command:
+    self:
+      result: "Résultat : {decision} ({reason})"
+      crossResult: "Résultat multi-plateforme : {decision}"
+      failed: "Échec de la vérification : {message}"
+    target:
+      result: "Résultat pour {target} : {decision} ({reason})"
+      crossResult: "Résultat multi-plateforme pour {target} : {decision}"
+      missing: "Veuillez désigner un utilisateur via @mention ou par son ID de plateforme."
+      failed: "Échec de la vérification de la cible : {message}"
+    crossDetail: "{total} comptes liés vérifiés : normaux {normal}, suspects {alt}, inconnus {unknown}."
+  note:
+    telegramHeuristic: La vérification Telegram est heuristique et peu fiable. Combinez-la avec d'autres signaux anti-abus.

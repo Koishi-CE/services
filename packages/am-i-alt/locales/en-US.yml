@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026-present Oppenheymu and Koishi-CE contributors.
+
+am-i-alt:
+  decision:
+    alt: suspected alt account
+    normal: normal account
+    unknown: unknown
+  reason:
+    discord-account-age: Discord account age is below threshold.
+    qq-level: QQ level is below threshold.
+    telegram-id-estimate: Telegram ID-based heuristic indicates a relatively new account.
+    platform-check-disabled: Check for this platform is disabled.
+    unsupported-platform: This platform is not supported yet.
+    missing-session: Session is missing.
+    missing-user-id: User ID is missing.
+    missing-telegram-user-id: Telegram user ID is missing.
+    missing-discord-created-at: Cannot read Discord account creation time.
+    invalid-discord-created-at: Discord creation time is invalid.
+    missing-onebot-bot: No available OneBot bot instance found.
+    invalid-user-id: User ID is invalid.
+    qq-level-fetch-failed: Failed to fetch QQ level.
+    telegram-estimate-failed: Failed to estimate Telegram account age.
+  command:
+    self:
+      result: "Result: {decision} ({reason})"
+      crossResult: "Cross-platform result: {decision}"
+      failed: "Check failed: {message}"
+    target:
+      result: "Result for {target}: {decision} ({reason})"
+      crossResult: "Cross-platform result for {target}: {decision}"
+      missing: "Please provide a target user via @mention or platform user ID."
+      failed: "Target check failed: {message}"
+    crossDetail: "Checked {total} bound accounts: normal {normal}, suspected alt {alt}, unknown {unknown}."
+  note:
+    telegramHeuristic: Telegram check is heuristic and low-confidence. Combine with other anti-abuse signals.
