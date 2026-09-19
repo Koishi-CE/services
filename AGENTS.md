@@ -26,7 +26,7 @@ bun run format       # biome format --write .
 
 - 仓库根 tsconfig.json 的 paths 按具体文件登记各包入口（`@koishi-ce/plugin-*` → `packages/*/src/index.ts`），新增包时同步补一行，编辑器可跳转子包源码。
 - 门禁全绿才提交；逐功能小步提交。
-- CI（.github/workflows/ci.yml）跑同一套门禁；release.yml 走 changesets 发版，需在仓库 Secrets 配置 `NPM_TOKEN`。
+- CI（.github/workflows/ci.yml）跑同一套门禁；**发包不经 CI**，统一走宿主实例发布链。
 
 ## 代码风格（biome 已强制）
 
@@ -52,7 +52,7 @@ bun run format       # biome format --write .
   ```
 
 - bump 类型：API 破坏 → major（1.x 前 → minor），新功能 → minor，修复 → patch；纯 chore 不需要。
-- 发版：CI 自动（changesets action：version PR → 合并后 publish）；手动则仓库根 `bun run release`（version → build → changeset publish）。
+- 发版：统一走宿主实例发布链（宿主工作区根 `bun run release`，koishi-scripts：version → build → publish；预演用 `bun run release:dryrun`），npm 凭证由宿主环境提供；仓内 `bun run release`（changeset version → build → changeset publish）仅为独立检出时的备用链。
 
 ## git 提交流程
 

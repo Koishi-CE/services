@@ -25,7 +25,14 @@ bun test             # 全量测试
 
 ## 发版
 
-走 Changesets：改动随提交在 `.changeset/` 写条目，CI（changesets action）自动开 version PR，合并后自动 build + publish。需在仓库 Secrets 配置 `NPM_TOKEN`。
+走 Changesets：改动随提交在 `.changeset/` 写条目。发包统一走宿主实例（koishi-dev-service）自带的 koishi-scripts 发布链，在宿主根执行：
+
+```bash
+bun run release:dryrun   # 预演：version → build → publish --dry-run
+bun run release          # 正式：koishi-scripts version → build → publish
+```
+
+仓内 `bun run version` / `bun run release`（changeset version → build → changeset publish）为独立检出的备用链。
 
 ## License
 
