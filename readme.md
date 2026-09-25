@@ -35,6 +35,7 @@
 | 包 | 说明 |
 | --- | --- |
 | [am-i-alt](./packages/am-i-alt) | 我是小号吗？跨平台小号检测服务：按 Discord 账龄 / QQ 等级 / Telegram ID 分布做启发式判定，结合 binding 表给出跨平台综合结论，注入 `ctx.amIAlt` 服务 |
+| [cron](./packages/cron) | 计划任务服务：`ctx.cron(input, callback)` 按 cron 表达式注册周期任务，基于 Bun.cron 原生调度，免疫上游 `setTimeout` 32 位溢出风暴缺陷，支持 tz 时区配置 |
 | [puppeteer](./packages/puppeteer) | 基于 puppeteer-core 的浏览器服务：`ctx.puppeteer`（开页 / 渲染截图 / SVG）、`ctx.canvas`（2D 绘图经 CDP 转译页内执行，零原生依赖）与 `component:html` 组件 |
 
 ---

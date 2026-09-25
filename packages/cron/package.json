@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@koishi-ce/plugin-cron",
+  "version": "1.1.0",
+  "description": "Cron job scheduling for Koishi",
+  "contributors": [
+    "Shigma <shigma10826@gmail.com>",
+    "Oppenheymu <oppenheymu@gmail.com>"
+  ],
+  "type": "module",
+  "main": "lib/index.mjs",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "development": "./src/index.ts",
+      "source": "./src/index.ts",
+      "import": "./lib/index.mjs",
+      "default": "./lib/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "src"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Koishi-CE/services.git",
+    "directory": "packages/cron"
+  },
+  "bugs": {
+    "url": "https://github.com/Koishi-CE/services/issues"
+  },
+  "homepage": "https://github.com/Koishi-CE/services/tree/master/packages/cron",
+  "keywords": [
+    "bot",
+    "chatbot",
+    "koishi",
+    "cron",
+    "schedule",
+    "timer"
+  ],
+  "koishi": {
+    "category": "tool",
+    "description": {
+      "en": "Cron job scheduling",
+      "zh": "以 cron 表达式注册计划任务"
+    },
+    "service": {
+      "implements": [
+        "cron"
+      ]
+    },
+    "locales": [
+      "zh"
+    ]
+  },
+  "peerDependencies": {
+    "@koishi-ce/koishi": "^1.0.0"
+  },
+  "devDependencies": {
+    "@koishi-ce/koishi": "^1.0.17"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "check": "biome check . && tsc --noEmit",
+    "fix": "biome check --write . && tsc --noEmit"
+  }
+}
