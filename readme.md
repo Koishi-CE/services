@@ -19,16 +19,14 @@
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](./LICENSE)
 
 <p>
-  <a href="#列表">列表</a> •
   <a href="#开发">开发</a> •
-  <a href="#发版">发版</a> •
   <a href="#english">English</a>
 </p>
 
 </div>
 
 > [!NOTE]\
-> 　全部包面向 [Koishi-CE](https://github.com/Koishi-CE/koishi) 社区再分发版生态
+> 　对上游多个 service 插件进行二次开发，面向 [Koishi-CE](https://github.com/Koishi-CE/koishi) 的插件合集
 
 ---
 
