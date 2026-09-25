@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@koishi-ce/plugin-puppeteer",
+  "version": "1.0.0",
+  "description": "Browser service for Koishi: page rendering, canvas proxying and html component",
+  "contributors": [
+    "Oppenheymu <oppenheymu@gmail.com>"
+  ],
+  "type": "module",
+  "main": "lib/index.mjs",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "development": "./src/index.ts",
+      "source": "./src/index.ts",
+      "import": "./lib/index.mjs",
+      "default": "./lib/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "src"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Koishi-CE/services.git",
+    "directory": "packages/puppeteer"
+  },
+  "bugs": {
+    "url": "https://github.com/Koishi-CE/services/issues"
+  },
+  "homepage": "https://github.com/Koishi-CE/services/tree/master/packages/puppeteer",
+  "keywords": [
+    "chatbot",
+    "koishi",
+    "plugin",
+    "service",
+    "puppeteer",
+    "browser",
+    "screenshot",
+    "render",
+    "canvas"
+  ],
+  "koishi": {
+    "category": "service",
+    "description": {
+      "en": "Browser service based on puppeteer-core: page rendering, canvas proxying and html component",
+      "zh": "基于 puppeteer-core 的浏览器服务：页面渲染、canvas 代理与 html 组件"
+    },
+    "service": {
+      "implements": [
+        "puppeteer",
+        "canvas"
+      ]
+    }
+  },
+  "peerDependencies": {
+    "@koishi-ce/koishi": "^1.0.0"
+  },
+  "dependencies": {
+    "puppeteer-core": "^22.5.0",
+    "puppeteer-finder": "^1.1.0"
+  },
+  "devDependencies": {
+    "@koishi-ce/koishi": "^1.0.17",
+    "@koishi-ce/plugin-http": "^1.0.1",
+    "@koishi-ce/plugin-mock": "^1.0.0",
+    "@koishi-ce/plugin-proxy-agent": "^1.0.1"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "check": "biome check . && tsc --noEmit",
+    "fix": "biome check --write . && tsc --noEmit"
+  }
+}

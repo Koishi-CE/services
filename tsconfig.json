@@ -4,7 +4,8 @@
   "files": ["types/yml.d.ts"],
   "compilerOptions": {
     "paths": {
-      "@koishi-ce/plugin-am-i-alt": ["./packages/am-i-alt/src/index.ts"]
+      "@koishi-ce/plugin-am-i-alt": ["./packages/am-i-alt/src/index.ts"],
+      "@koishi-ce/plugin-puppeteer": ["./packages/puppeteer/src/index.ts"]
     }
   }
 }

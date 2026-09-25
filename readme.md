@@ -11,6 +11,7 @@
 | 包 | 说明 |
 | --- | --- |
 | [@koishi-ce/plugin-am-i-alt](./packages/am-i-alt) | 我是小号吗？跨平台小号检测服务：按 Discord 账龄 / QQ 等级 / Telegram ID 分布做启发式判定，结合 binding 表给出跨平台综合结论，注入 `ctx.amIAlt` 服务供其他插件调用 |
+| [@koishi-ce/plugin-puppeteer](./packages/puppeteer) | 基于 puppeteer-core 的浏览器服务：`ctx.puppeteer`（开页 / 渲染截图 / SVG）、`ctx.canvas`（2D 绘图经 CDP 转译页内执行，零原生依赖）与 `component:html` 组件，重构移植自上游 koishi-plugin-puppeteer 的 core 包 |
 
 ## 开发
 
