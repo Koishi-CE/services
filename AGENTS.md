@@ -58,4 +58,4 @@ bun run format       # biome format --write .
 
 1. 先跑 `bun run check` 确认全绿再提交。
 2. `git add -A` 后提交，简体中文提交信息（`feat:` / `fix:` / `docs:` / `chore:`）。
-3. 主分支 `master` 直提；完成后向用户简要说明改动与提交哈希。
+3. 主分支 `main` 直提；完成后向用户简要说明改动与提交哈希。

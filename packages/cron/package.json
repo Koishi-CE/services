@@ -36,7 +36,7 @@
   "bugs": {
     "url": "https://github.com/Koishi-CE/services/issues"
   },
-  "homepage": "https://github.com/Koishi-CE/services/tree/master/packages/cron",
+  "homepage": "https://github.com/Koishi-CE/services/tree/main/packages/cron",
   "keywords": [
     "bot",
     "chatbot",

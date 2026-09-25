@@ -35,7 +35,7 @@
   "bugs": {
     "url": "https://github.com/Koishi-CE/services/issues"
   },
-  "homepage": "https://github.com/Koishi-CE/services/tree/master/packages/puppeteer",
+  "homepage": "https://github.com/Koishi-CE/services/tree/main/packages/puppeteer",
   "keywords": [
     "chatbot",
     "koishi",
