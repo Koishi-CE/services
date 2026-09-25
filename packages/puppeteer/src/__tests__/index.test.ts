@@ -46,13 +46,18 @@ const executable = (() => {
 })();
 
 describe.skipIf(!executable)("端到端集成（需本机浏览器）", () => {
-    // CI runner 冷启动 Chrome（spawn + CDP 握手 + 引导页）超过 bun 默认 5s
-    // hook/测试超时，端到端组统一放宽到 30s（ubuntu-latest 预装 Chrome，
-    // 本组在 CI 上真跑而非 skip）
+    // 30s：CI runner 冷启动 Chrome（spawn + CDP 握手 + 引导页）超过 bun
+    // 默认 5s hook/测试超时（ubuntu-latest 预装 Chrome，本组在 CI 上真跑）。
+    // --no-sandbox：GH runner（Ubuntu 23.10+）经 AppArmor 禁用了非特权
+    // userns，Chrome 无可用沙箱会 FATAL 退出（zygote_host_impl_linux.cc）；
+    // 测试环境统一关沙箱，不影响生产配置语义。
     const e2eTimeout = 30_000;
     const app = new Context();
     app.plugin(HTTP);
-    app.plugin(puppeteerPlugin, defaultConfig);
+    app.plugin(puppeteerPlugin, {
+        ...defaultConfig,
+        args: [...defaultConfig.args, "--no-sandbox"],
+    });
 
     beforeAll(async () => {
         await app.start();
