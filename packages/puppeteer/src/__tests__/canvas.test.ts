@@ -3,8 +3,8 @@
 
 import { describe, expect, it } from "bun:test";
 import { Context } from "@koishi-ce/koishi";
-import type { CanvasStatement } from "./canvas.ts";
-import { CanvasElement, ImageElement, isElementRef, renderStatement } from "./canvas.ts";
+import type { CanvasStatement } from "../canvas.ts";
+import { CanvasElement, ImageElement, isElementRef, renderStatement } from "../canvas.ts";
 
 interface FakePage {
     expressions: string[];

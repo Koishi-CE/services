@@ -2,7 +2,7 @@
 // Copyright (c) 2026-present Oppenheymu and Koishi-CE contributors.
 
 import { describe, expect, it } from "bun:test";
-import { SVG, Tag } from "./svg.ts";
+import { SVG, Tag } from "../svg.ts";
 
 describe("SVG 构建器", () => {
     it("默认尺寸 200 与自动 viewBox", () => {

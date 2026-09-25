@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "bun:test";
 import { h } from "@koishi-ce/koishi";
-import { BOOTSTRAP_HTML, renderInlineDocument, styleObjectToCss } from "./html.ts";
+import { BOOTSTRAP_HTML, renderInlineDocument, styleObjectToCss } from "../html.ts";
 
 describe("页内引导脚本", () => {
     it("包含两个工具函数，且 base64 清洗正则修正为匹配空白符", () => {

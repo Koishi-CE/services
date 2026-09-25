@@ -2,7 +2,7 @@
 // Copyright (c) 2026-present Oppenheymu and Koishi-CE contributors.
 
 import { describe, expect, it } from "bun:test";
-import { buildLaunchOptions, defaultArgs, defaultConfig, defaultViewport } from "./config.ts";
+import { buildLaunchOptions, defaultArgs, defaultConfig, defaultViewport } from "../config.ts";
 
 describe("配置与启动参数映射", () => {
     it("默认配置与上游 schema 默认值一致", () => {

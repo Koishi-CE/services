@@ -9,10 +9,10 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { Context } from "@koishi-ce/koishi";
 import HTTP from "@koishi-ce/plugin-http";
-import { PuppeteerCanvas } from "./canvas.ts";
-import { defaultConfig } from "./config.ts";
-import * as puppeteerPlugin from "./index.ts";
-import { findExecutable, name, Puppeteer } from "./index.ts";
+import { PuppeteerCanvas } from "../canvas.ts";
+import { defaultConfig } from "../config.ts";
+import * as puppeteerPlugin from "../index.ts";
+import { findExecutable, name, Puppeteer } from "../index.ts";
 
 describe("插件装配（无浏览器链路）", () => {
     it("插件导出面齐全", () => {
