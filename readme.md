@@ -14,6 +14,8 @@
 
 [![CI](https://img.shields.io/github/actions/workflow/status/Koishi-CE/services/ci.yml?style=flat-square&label=CI)](https://github.com/Koishi-CE/services/actions/workflows/ci.yml)
 &emsp;
+[![codecov](https://img.shields.io/codecov/c/gh/Koishi-CE/services?style=flat-square&logo=codecov)](https://codecov.io/gh/Koishi-CE/services)
+&emsp;
 [![Bun](https://img.shields.io/badge/runtime-Bun-f472b6?style=flat-square&logo=bun)](https://bun.sh)
 &emsp;
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](./LICENSE)
