@@ -12,8 +12,13 @@
  */
 import type { Context } from "@koishi-ce/koishi";
 import { Service } from "@koishi-ce/koishi";
+import deDE from "../locales/de-DE.yml";
 import enUS from "../locales/en-US.yml";
+import frFR from "../locales/fr-FR.yml";
+import jaJP from "../locales/ja-JP.yml";
+import ruRU from "../locales/ru-RU.yml";
 import zhCN from "../locales/zh-CN.yml";
+import zhTW from "../locales/zh-TW.yml";
 import { registerAmIAltCommands } from "./commands.ts";
 import type { Config as PluginConfig } from "./config.ts";
 import { Config as ConfigSchema } from "./config.ts";
@@ -77,9 +82,17 @@ export type {
 } from "./types.ts";
 
 export function apply(ctx: Context, config: PluginConfig) {
-    // 注册插件内置文案
+    // 注册插件内置文案。七语种必须**逐一 import 并 define**：只把 yml 放进
+    // locales/ 而不 import 的话，它既不会在运行时注册，也不会被 tsdown 的
+    // yml copy loader 拷进 lib/assets（产物里只会有被 import 的那几个）。
+    // 这条纪律由 tooling/checks/locales.ts 的「存在但未 import」对账强制。
     ctx.i18n.define("zh-CN", zhCN);
+    ctx.i18n.define("zh-TW", zhTW);
     ctx.i18n.define("en-US", enUS);
+    ctx.i18n.define("ja-JP", jaJP);
+    ctx.i18n.define("fr-FR", frFR);
+    ctx.i18n.define("de-DE", deDE);
+    ctx.i18n.define("ru-RU", ruRU);
 
     // 先挂载服务，再注册命令（命令与下游消费者都通过 ctx.amIAlt 调用）
     ctx.plugin(AmIAltService, config);
