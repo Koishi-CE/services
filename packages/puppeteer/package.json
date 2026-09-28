@@ -70,7 +70,6 @@
   "devDependencies": {
     "@koishi-ce/koishi": "^1.0.17",
     "@koishi-ce/plugin-http": "^1.0.1",
-    "@koishi-ce/plugin-mock": "^1.0.0",
     "@koishi-ce/plugin-proxy-agent": "^1.0.1"
   },
   "scripts": {

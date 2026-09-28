@@ -1,0 +1,6 @@
+{
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/plugin-schema.json",
+  "name": "repo-toolchain",
+  "detection": { "type": "fileExists", "pattern": "**/tsdown.config.ts" },
+  "toolingDependencies": ["tsdown", "@typescript/native"]
+}

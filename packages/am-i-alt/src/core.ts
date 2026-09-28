@@ -61,7 +61,8 @@ function toDate(value: string | number | Date): Date | null {
     return Number.isNaN(date.getTime()) ? null : date;
 }
 
-export function getDiscordCreatedAt(session: AltCheckSession, ctx: Context): Date | null {
+/** 取 Discord 账号创建时间；仅本文件的判定链调用，不外暴露 */
+function getDiscordCreatedAt(session: AltCheckSession, ctx: Context): Date | null {
     const createdAtRaw = session.event?.user?.createdAt ?? session.author?.createdAt;
 
     if (!createdAtRaw) {
@@ -109,7 +110,8 @@ function parseQqLevel(response: unknown): number | null {
     return null;
 }
 
-export async function getQqLevel(
+/** 取 OneBot 账号等级；仅本文件的判定链调用，不外暴露 */
+async function getQqLevel(
     numericUserId: number,
     bot: OneBotLikeBot,
     ctx: Context,

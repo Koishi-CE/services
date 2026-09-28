@@ -1,0 +1,51 @@
+{
+  // 代码库审计配置（死代码与依赖面），驱动 CI 的 fallow job 与本地 bun run fallow。
+  //
+  // 版本在根 package.json 的 fallow 脚本内 pin 到精确版（不用浮动 range）：
+  // fallow 迭代极快，浮动会让 dead-code 门禁的判定口径在无代码改动时漂移，
+  // 审计基线数字随之不可复现。升级须显式改脚本内版本号并复核本文的豁免条目。
+  //
+  // 本仓只有 packages 一层的三个服务型插件包，故豁免清单一律附理由、能收编就
+  // 收编（entry / toolingDependencies），只在**确实无法按包精确豁免**时才用
+  // ignoreDependencies（fallow 的 ignoreDependencies 是全局的，写包名会同时
+  // 豁免 unused 与 unlisted 两类，且无法限定到单个包）。
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+
+  // 静态不可达但确实是入口的文件：tsdown 的构建配置不参与运行时图，但它是
+  // 真实被 bun run build 加载的入口（三个包各一份）。
+  "entry": ["**/tsdown.config.ts"],
+
+  // 本仓的工程工具目录：门禁脚本由 bun 直跑，不进任何运行时代码的静态图。
+  // 不排除的话，它们会被当成「未被任何入口可达」的文件误报。
+  "ignorePatterns": ["tooling/**"],
+
+  // 工具链依赖的载体（fallow 的 toolingDependencies 只存在于「插件定义」里，
+  // 顶层没有该字段；顶层 plugins 是**路径数组**，指向定义文件而非定义对象）。
+  // 定义内容见 .fallowrc.plugins.jsonc：tsdown（构建器，由 bun run build 经
+  // node_modules/.bin 加载，源码里无 import 边）与 @typescript/native
+  // （类型检查器，由 tsc 二进制按路径加载，同样无 import 边）。
+  "plugins": [".fallowrc.plugins.jsonc"],
+
+  // 全局包名豁免。每条都必须写清「为什么无法用 entry / toolingDependencies /
+  // 删除声明解决」——fallow 的 ignoreDependencies 同时豁免 unused 与 unlisted
+  // 两类发现，且无法限定到单个包，写宽了会掩盖真实问题。
+  "ignoreDependencies": [
+    // puppeteer 的纯类型依赖：packages/puppeteer/src/index.ts 第一行以
+    // `import type {} from "@koishi-ce/plugin-proxy-agent"` 做**空导入**，
+    // 只为触发对方包对 ctx.http 的 declare module 类型增强（配合
+    // tsconfig 的 verbatimModuleSyntax，改成具名类型导入会丢掉增强面）。
+    // fallow 不把空导入计为依赖使用，故报 unused-dev-dependency——误报。
+    // 试过源文件内联抑制注释（fallow-ignore-next-line），对 manifest 级发现无效：
+    // fallow 明确「manifest-owned findings 只走配置级豁免」，故只能落在这里。
+    "@koishi-ce/plugin-proxy-agent"
+  ],
+
+  "rules": {
+    // cordis 的 Service 基类在启动 / 停止时**按成员名反射调用**生命周期钩子
+    // （start / stop），静态图里看不到这类调用边。本仓 PuppeteerCanvas 覆写的
+    // start / stop 即属此类：报 unused-class-member 是误报。与参照仓同口径
+    // 关掉该类检测；代价是该类真死方法今后不会被门禁发现（可接受：本仓
+    // 类成员总量很小，且都是服务实现）。
+    "unused-class-members": "off"
+  }
+}
