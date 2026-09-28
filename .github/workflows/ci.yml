@@ -1,8 +1,8 @@
 # CI 门禁流水线
 #
-# 单个 job `gate`：安装 → lint → 类型检查 → 测试 → 构建。job 名即主分支 ruleset
-# 「保护主分支」里填的必需状态检查名（**ruleset 只认 job 名**，不含 workflow 名、
-# 矩阵与事件类型），改动此处必须同步 ruleset。
+# 单个 job `gate`：安装 → lint → 类型检查 → 测试 → 构建 → 测试（覆盖率）→ 上传。
+# job 名即主分支 ruleset「保护主分支」（id 24119346）里填的必需状态检查名
+# （**ruleset 只认 job 名**，不含 workflow 名、矩阵与事件类型），改动此处须同步 ruleset。
 #
 # 顺序依赖（写在这里是因为它是隐性约束，不写就会被「顺手重排」打破）：
 #   - 当前**不需要** build 前置于 typecheck / test：根 tsconfig.json 的 paths 指向
@@ -12,10 +12,10 @@
 #     dist/lib 真实产物，**必须**把 build 提到它们之前（参照仓就是这么踩到
 #     TS2307 与「干净环境整套用例必失败」的）。
 #
-# 触发面：merge_group 不可省。主分支 ruleset 启用 merge queue 后，GitHub 对必需
-# 检查只认「在队列建的 gh-readonly-queue/<base>/pr-* 临时 ref 上跑出来的」那一次，
-# pull_request 那次不算数：缺 merge_group 时队列永远等不到检查上报，超时（ruleset
-# 的 check_response_timeout_minutes）后把 PR 从队列里剔除，等于合并必然失败。
+# 触发面：merge_group 不可省。ruleset 启用 merge queue 后，GitHub 对必需检查只认
+# 「在队列建的 gh-readonly-queue/<base>/pr-* 临时 ref 上跑出来的」那一次，
+# pull_request 那次不算数：缺 merge_group 时队列永远等不到检查上报，超时（ruleset 的
+# check_response_timeout_minutes，本仓 10 分钟）后把 PR 从队列里剔除，等于合并必然失败。
 # 官方原文：「You must update your CI configuration to trigger and report on merge
 # group events when requiring a merge queue.」
 #
@@ -24,6 +24,17 @@
 #
 # Bun 版本不在此处硬编码：oven-sh/setup-bun 自动读根 package.json 的
 # packageManager（bun@1.4.2），升级只改根字段即可。
+#
+# 覆盖率：Codecov 接入（2026-09-28）。ruleset 已开 code_coverage 规则
+# （minimum_coverage 90 / max_coverage_drop 1），故覆盖率不是可选装饰——不产出
+# 覆盖率报告时该规则会一直等不到数据。上传步骤排在末尾，且**排除 merge_group**：
+# 队列那一遍与 pull_request 那一遍内容相同，重复上传只会用同一 commit 覆盖自己。
+#
+# 第三方 Action 一律钉到 commit SHA（附 `# vX.Y.Z` 注释供 Dependabot 与人工识别）：
+# ruleset 的 code_scanning 规则（CodeQL，security_alerts_threshold = all）会把
+# `actions/unpinned-tag` 告警算作阻塞项。实测 2026-09-28 因 `oven-sh/setup-bun@v2`
+# 未钉 SHA 而产生 1 条 medium 告警（告警 3），会卡死所有 PR。Dependabot 的
+# github-actions 条目会自动跟随新版本并改写 SHA 与注释（见 .github/dependabot.yml）。
 
 name: CI
 
@@ -48,8 +59,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
       # 锁文件格式守门（仅 Dependabot PR）：其 updater 镜像内的 Bun 版本不跟随仓库
       # packageManager，会把 lockfileVersion 2 的 bun.lock 静默降级重写
       # （dependabot-core#15848 / #15897），使 PR diff 被整份锁文件重排淹没、真实依赖
@@ -78,3 +89,15 @@ jobs:
         run: bun test
       - name: 构建（按包 tsdown）
         run: bun run build
+      # 覆盖率单独跑一遍、而非给上一步加旗标：让 CI 的「测试」与本地门禁
+      # `bun run check` 里的 `bun test` 逐字一致，覆盖率的采集口径另立一行，便于对账
+      # （本地可复现命令：bun test --isolate --coverage --coverage-reporter=lcov）。
+      - name: 测试（覆盖率，供 Codecov）
+        run: bun test --isolate --coverage --coverage-reporter=lcov --coverage-dir=coverage
+      - name: 上传覆盖率到 Codecov
+        if: github.event_name != 'merge_group'
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          files: coverage/lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false

@@ -1,0 +1,70 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026-present Oppenheymu and Koishi-CE contributors.
+
+# CODEOWNERS —— 谁是需要复核这些路径的人。
+#
+# 生效位置：GitHub 按 .github/CODEOWNERS → /CODEOWNERS → docs/CODEOWNERS 的顺序取
+# 第一份命中的文件，本仓放这里。
+#
+# 语法要点（写新规则前先读）：
+# - 每行 `模式 所有者...`；`#` 开头为注释；空行忽略。
+# - 所有者只能是「本仓协作者」或「组织 team」；组织当前没有 team，因此全部写个人
+#   handle。写错的 handle 会被 GitHub 静默忽略该行。
+# - 模式顺序有意义：**同一文件被多条规则命中时，最后一条生效**。故本文件先写通配
+#   （`*`），再写目录通配，最后写显式文件路径，后者压前者。
+# - 以 `/` 开头的模式锚定仓库根；`**` 跨目录；`*` 不跨 `/`。
+#
+# 现状（2026-09-28 核对）：本仓 ruleset「保护主分支」（id 24119346）已开启
+# require_code_owner_review，即下方 owner 的批准已是合并的必要条件。
+#
+# 维护纪律：新增高风险路径（发布链 / 根配置 / CI / 门禁脚本 / 锁文件等）时在本文件
+# 补一条规则。**凡「改它等于改哪些步骤算通过」的文件都必须两人共管**——门禁脚本与
+# CI 工作流同属这一类。
+#
+# 已知限制：GitHub 的 CODEOWNERS 没有排除语法，规则一律是「附加」。`*` 兜底使
+# @Oppenheymu 成为所有文件的 owner，因此开着 "Require review from Code Owners" 时，
+# 由 @Oppenheymu 自己提的 PR 若只触及他独有的路径，无需他人批准；**触及下方两人
+# 共有的显式路径时，必须由 @PaperKoi 批准**（PR 作者不能批准自己的 PR）。
+# 若将来要把「谁的代码谁回避」写成硬约束，需要 GitHub 的 team 机制（组织当前没有
+# team），届时把下方 owner 换成 @Koishi-CE/<team> 即可。
+
+# ---- 通配兜底（自上而下，越靠下越具体） ----
+
+# 兜底：兜住所有改动，未单列的路径默认归活跃维护者。
+*                                   @Oppenheymu
+
+# 插件本体：三个服务型包的源码、词典与包清单。
+/packages/**                        @Oppenheymu @PaperKoi
+
+# 文档与常驻指令。
+/docs/**                            @Oppenheymu @PaperKoi
+/AGENTS.md                          @Oppenheymu @PaperKoi
+
+# 门面文件：对外首屏（README）与许可声明，改动影响发布面观感与法律声明。
+/readme.md                          @Oppenheymu @PaperKoi
+/LICENSE                            @Oppenheymu @PaperKoi
+
+# 门禁自研脚本：与 CI 同属「门禁执行面」，改它等于改哪些步骤算通过。
+/tooling/**                         @Oppenheymu @PaperKoi
+
+# ---- 敏感路径：仓库级配置、依赖面与门禁执行面（两人过目） ----
+
+# 依赖面与仓库级解析口径（改动影响全仓安装结果与门禁口径）
+/package.json                       @Oppenheymu @PaperKoi
+/bun.lock                           @Oppenheymu @PaperKoi
+/tsconfig.json                      @Oppenheymu @PaperKoi
+/tsconfig.base.json                 @Oppenheymu @PaperKoi
+/biome.json                         @Oppenheymu @PaperKoi
+/.editorconfig                      @Oppenheymu @PaperKoi
+/.gitattributes                     @Oppenheymu @PaperKoi
+/.gitignore                         @Oppenheymu @PaperKoi
+/.fallowrc.jsonc                    @Oppenheymu @PaperKoi
+/types/**                           @Oppenheymu @PaperKoi
+
+# 版本与发布面（changeset 条目直接决定发出去的版本号）
+/.changeset/**                      @Oppenheymu @PaperKoi
+
+# CI、发布链与依赖更新策略（门禁与流程的唯一执行面）
+/.github/workflows/**               @Oppenheymu @PaperKoi
+/.github/dependabot.yml             @Oppenheymu @PaperKoi
+/.github/CODEOWNERS                 @Oppenheymu @PaperKoi
