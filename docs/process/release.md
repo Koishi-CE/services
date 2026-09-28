@@ -4,22 +4,29 @@
 > **先读**：开发与门禁见 [../guides/development.md](../guides/development.md)；包结构与依赖纪律见 [../reference/architecture.md](../reference/architecture.md)；改造背景见 [../decisions/services-modernization.md](../decisions/services-modernization.md)。
 > **本文结构**：1 发布链与环境前置 · 2 触发与两 job 分工 · 3 changesets 约定 · 4 发布顺序与补发 · 5 暂存区（staged publish）与 409 · 6 事故记录（为什么禁止手动 publish） · 7 OIDC 的信任边界。
 >
-> **实施状态（阶段 4 写作时）**：阶段 5 落地 `release.yml` 与发布脚本。在此之前，仓内 `bun run release`（`changeset version && bun run --filter './packages/*' build && changeset publish`）与宿主实例发布链仍是仅有的通道；阶段 5 合并后以本文为准。文中已实测的坑（暂存区、事故记录、OIDC 三类）在两种通道下同样适用。
+> **实施状态（阶段 5 落地）**：`tooling/release/` 发布脚本与 `.github/workflows/release.yml` 已在本阶段引入；合并后 `main` 上的 changeset 会由 CI 自动消费并发版（`publish` 仍受 `release` environment 审批）。本地 `bun run release <cmd>` 保留为演练与排查通道。文中已实测的坑（暂存区、事故记录、OIDC）在两种通道下同样适用。
+>
+> **首次发布的特有风险**：`@koishi-ce/plugin-am-i-alt` 与 `@koishi-ce/plugin-puppeteer` 在 npm 上从未发布（404），首发**不可回滚**。三条前置缺一不可：① npm 侧为三个包各配一条 OIDC 信任关系（第 7 节）；② `APP_PRIVATE_KEY` 指向的 App 的 `app_id` 在 ruleset 的 bypass 名单里；③ `release` environment 的 Deployment branches 只允许 `main`。
 
 ## 1. 发布链与环境前置
 
 发布由 CI 编排为四个环节，本地脚本与 CI 共用同一份实现（`tooling/release/`，零第三方依赖、`bun` 直跑）：
 
 ```bash
-bun tooling/release/index.ts version    # 消费 .changeset/ 条目（changeset version）+ 刷新 bun.lock
-bun tooling/release/index.ts build      # bun run --filter './packages/*' build
-bun tooling/release/index.ts test       # 与门禁同一口径的测试
-bun tooling/release/index.ts publish    # registry 版本比对 → 逐包 npm publish --access public
+bun run release status                   # 只读概览：pending changeset、各包本地 vs registry 版本
+bun run release version                  # 消费 .changeset/ 条目（changeset version）+ 刷新 bun.lock
+bun run release build                    # bun run --filter './packages/*' build
+bun run release test                     # 与门禁同一口径的测试（bun test --isolate）
+bun run release publish                  # 终局断言 → registry 比对 → 逐包 npm publish --access public --provenance
 ```
+
+旗标：`--dry-run`（只打印计划，不落盘、不发包；对 `publish` 尤其有用）、`--from-tarballs <目录>`（发布已打好的 tarball 而不是就地重新打包——这是 CI 的 `publish` job 用的口径，发布物与构建产物逐字同一份，且该 job 不执行打包代码）。环境变量 `KOISHI_CE_REGISTRY` 可切换 registry 查询源（默认 `registry.npmjs.org`）。
 
 行为约定：任何一步失败立即中断并保留现场；重跑幂等（已发布版本经 registry 比对自动跳过）——例外是 npm 暂存区中的版本不计入比对，此时重跑不幂等（见第 5 节）。
 
-**本仓按小仓裁剪，刻意不做**：拓扑序（三个包之间无互依赖）、`workspace:*` 改写（本仓纪律本就禁用该协议）。但发布前保留一条**终局断言**：扫描各包依赖字段，不得残留 `workspace:` / `file:` / `link:`——首发包一旦带上这类协议就无法回滚。
+**本仓按小仓裁剪，刻意不做**：拓扑序（三个包之间无互依赖）、`workspace:*` 改写（本仓纪律本就禁用该协议）、所有权预检与登录态检查（OIDC 下 `npm whoami` / `npm owner ls` 必然失败，见第 7 节）。但发布前保留一条**终局断言**：扫描各包的四个依赖字段，不得残留 `workspace:` / `file:` / `link:`——首发包一旦带上这类协议就无法回滚（Koishi-CE 主仓 2026-08-31 事故同源）。
+
+**为什么 CI 发的是 tarball**：`prepare` 用 `npm pack` 把三个包的发布物打进 artifact，`publish` 用 `--from-tarballs` 发那一份。这样发布物与构建产物逐字同一份，且持 OIDC token 的 job 不执行任何打包 / 安装代码——执行面越小越好（见第 2 节的设计约束）。
 
 环境前置（仓库设置，非代码）：
 
@@ -33,8 +40,8 @@ bun tooling/release/index.ts publish    # registry 版本比对 → 逐包 npm p
 
 | job | 职责 | 权限 |
 | --- | --- | --- |
-| `prepare` | 消费 changeset → build → test → 用 GitHub App token 推送版本提交 → 打包 artifact | `contents: write`，**无** `id-token` |
-| `publish` | 解包 artifact → 逐包 `npm publish` | `id-token: write` + `environment: release` 审批，**无** `contents: write`，且**不跑 `bun install`** |
+| `prepare` | 消费 changeset → build → test → 用 GitHub App token 推送版本提交 → 逐包 `npm pack` 上传 artifact | `contents: write`，**无** `id-token`，**不挂** environment |
+| `publish` | 下载 artifact → 逐包 `npm publish <tarball>` | `id-token: write` + `environment: release` 审批，`contents: read`，**不跑** `bun install` |
 
 `workflow_dispatch` 另带 `skip-version` 布尔输入：changeset 一旦被消费，重跑就再也走不到 publish（version 环无条目可消费 → `changed=false` → publish 被跳过），此时置 `skip-version=true` 跳过 version 环、直接构建当前 `main` 交给 publish，由 registry 比对决定哪些版本真要发（已发布的自动跳过）。它不改变审批语义——publish 依旧卡在 `environment: release`。
 
