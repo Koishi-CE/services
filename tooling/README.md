@@ -15,6 +15,7 @@
 | 子目录 | 调用方式 | 用途 |
 | --- | --- | --- |
 | [checks/](./checks/) | `bun run check:*`（已并入 `bun run check`） | 门禁检查脚本：词典 / 包纪律 / 文档链接 / PR 模板 / SPDX |
+| [release/](./release/) | `bun run release <status\|version\|build\|test\|publish>` | 发布链：消费 changeset、按包构建、与门禁同口径的测试、registry 比对后逐包发布 |
 
 ## checks/ — 门禁检查脚本
 
@@ -31,9 +32,23 @@
 ### 尚未纳入的检查（本仓已知缺口）
 
 - **tsdown 配置与 `types/yml.d.ts` 的 SPDX 头**：本仓还有 4 个手写文件缺头（3 个 `packages/*/tsdown.config.ts` + 根 `types/yml.d.ts`）。`spdx.ts` 当前**不扫**这两类路径，故闸门是绿的；补齐这 4 个头之后，应把扫描面扩到它们（计划书 §7.5 的 G16 / G25）。
-- **`koishi.locales` 的完整声明**：闸门只保证「声明 ⊆ 实际」，不强制声明全部语种。`am-i-alt` 当前声明 `["zh", "en"]`——语种文件补齐并注册后应同步为七个前缀。
+- **`koishi.locales` 的完整性**：闸门只保证「声明 ⊆ 实际」，不强制声明全部语种，故漏声明不会红。三包当前声明已与文件集合一致（`am-i-alt` 七个前缀、`cron` / `puppeteer` 无词典亦无声明），但这是人工维护的结果，不是闸门强制的。
 
 盲区（这些路径**不在**任何门禁视野内，改动它们不会触发红灯）：`locales/*.yml` 的格式、`tsdown.config.ts`、`tsconfig*.json`、根 `package.json` 的字段形态，以及生成物 `packages/*/lib/**`。
+
+## release/ — 发布链
+
+零依赖单文件脚本，编排「消费 changeset → 构建 → 测试 → 逐包发布」四环；版本与发布流程见 [docs/process/release.md](../docs/process/release.md)。
+
+```bash
+bun run release status            # 只读概览：pending changeset、各包本地 vs registry 版本（含「从未发布」标记）
+bun run release version           # 消费 changeset（changeset version）+ 刷新 bun.lock
+bun run release build             # 按包 tsdown
+bun run release test              # 与门禁同口径的测试（bun test --isolate）
+bun run release publish           # 终局断言 → registry 比对 → 逐包 npm publish --access public --provenance
+```
+
+`--dry-run` 只打印计划（对 `publish` 尤其有用：可先看清哪些包会发、哪些会跳过）。按小仓裁剪的三处取舍（不做拓扑序 / 不做 workspace 协议改写但保留终局断言 / 不做所有权预检）写在脚本头部注释里。
 
 ## 新增工具时
 

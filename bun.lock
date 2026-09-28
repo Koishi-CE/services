@@ -15,7 +15,7 @@
     },
     "packages/am-i-alt": {
       "name": "@koishi-ce/plugin-am-i-alt",
-      "version": "3.0.0",
+      "version": "3.1.0",
       "devDependencies": {
         "@koishi-ce/koishi": "^1.0.17",
         "@koishi-ce/plugin-database-memory": "^1.1.1",
@@ -27,7 +27,7 @@
     },
     "packages/cron": {
       "name": "@koishi-ce/plugin-cron",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "devDependencies": {
         "@koishi-ce/koishi": "^1.0.17",
       },
@@ -37,7 +37,7 @@
     },
     "packages/puppeteer": {
       "name": "@koishi-ce/plugin-puppeteer",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "dependencies": {
         "puppeteer-core": "^22.5.0",
         "puppeteer-finder": "^1.1.0",

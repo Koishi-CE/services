@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@koishi-ce/plugin-am-i-alt",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "Alt account detection service for Koishi",
   "contributors": [
     "Oppenheymu <oppenheymu@gmail.com>"

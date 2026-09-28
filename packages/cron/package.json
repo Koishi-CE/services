@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@koishi-ce/plugin-cron",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Cron job scheduling for Koishi",
   "contributors": [
     "Shigma <shigma10826@gmail.com>",
