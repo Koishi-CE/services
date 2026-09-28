@@ -1,20 +1,80 @@
+# CI 门禁流水线
+#
+# 单个 job `gate`：安装 → lint → 类型检查 → 测试 → 构建。job 名即主分支 ruleset
+# 「保护主分支」里填的必需状态检查名（**ruleset 只认 job 名**，不含 workflow 名、
+# 矩阵与事件类型），改动此处必须同步 ruleset。
+#
+# 顺序依赖（写在这里是因为它是隐性约束，不写就会被「顺手重排」打破）：
+#   - 当前**不需要** build 前置于 typecheck / test：根 tsconfig.json 的 paths 指向
+#     各包 `src/index.ts` 源码（不是 lib 产物），测试也经同一套 paths 解析到 src。
+#     故干净检出、没有 lib/ 的情况下 typecheck 与 test 都能过——已实测。
+#     一旦将来有 tsconfig 的 paths 改指 `packages/*/lib/*.d.ts`，或有测试去读
+#     dist/lib 真实产物，**必须**把 build 提到它们之前（参照仓就是这么踩到
+#     TS2307 与「干净环境整套用例必失败」的）。
+#
+# 触发面：merge_group 不可省。主分支 ruleset 启用 merge queue 后，GitHub 对必需
+# 检查只认「在队列建的 gh-readonly-queue/<base>/pr-* 临时 ref 上跑出来的」那一次，
+# pull_request 那次不算数：缺 merge_group 时队列永远等不到检查上报，超时（ruleset
+# 的 check_response_timeout_minutes）后把 PR 从队列里剔除，等于合并必然失败。
+# 官方原文：「You must update your CI configuration to trigger and report on merge
+# group events when requiring a merge queue.」
+#
+# 顺序纪律（硬约束）：本文件必须先带上 merge_group 并合并，**再**去打开 ruleset 的
+# 必需状态检查。反了会把合并卡死，且现象是「队列超时剔单」而非报错，排查成本很高。
+#
+# Bun 版本不在此处硬编码：oven-sh/setup-bun 自动读根 package.json 的
+# packageManager（bun@1.4.2），升级只改根字段即可。
+
 name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
+  merge_group:
+  workflow_dispatch:
+
+# 同一分支 / PR 的旧跑自动取消，不占额度。merge_group 的 ref 逐 entry 独立
+# （gh-readonly-queue/... 带该 entry 的 sha），因此不会跨 entry 误取消。
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   gate:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
+      # 锁文件格式守门（仅 Dependabot PR）：其 updater 镜像内的 Bun 版本不跟随仓库
+      # packageManager，会把 lockfileVersion 2 的 bun.lock 静默降级重写
+      # （dependabot-core#15848 / #15897），使 PR diff 被整份锁文件重排淹没、真实依赖
+      # 变更不可评审。常规 PR 零影响；Bun 升级使基线前移时同步调整下方阈值。
+      - name: 锁文件格式守门（仅 Dependabot PR）
+        if: github.actor == 'dependabot[bot]'
+        run: |
+          bun -e '
+            const text = await Bun.file("bun.lock").text();
+            const match = /"lockfileVersion":\s*(\d+)/.exec(text);
+            const version = match ? Number(match[1]) : 0;
+            console.log(`bun.lock lockfileVersion=${match ? version : "<未找到>"}`);
+            if (version < 2) {
+              console.log("::error::bun.lock 的 lockfileVersion 低于基线 2，疑似被 Dependabot 的旧版 Bun 降级重写；请用仓库钉定的 Bun（根 package.json 的 packageManager）重新执行 bun install 后提交。");
+              process.exit(1);
+            }
+          '
+      # CI 环境下 bun install 自动 frozen-lockfile（锁文件与 package.json 不一致即失败），
+      # 故此处不显式加 --frozen-lockfile，与参照仓口径一致。
       - run: bun install
-      - run: bun run lint
-      - run: bun run typecheck
-      - run: bun test
-      - run: bun run build
+      - name: lint（biome）
+        run: bun run lint
+      - name: 类型检查（TS7）
+        run: bun run typecheck
+      - name: 测试（bun:test）
+        run: bun test
+      - name: 构建（按包 tsdown）
+        run: bun run build

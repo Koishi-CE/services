@@ -54,8 +54,13 @@ bun run format       # biome format --write .
 - bump 类型：API 破坏 → major（1.x 前 → minor），新功能 → minor，修复 → patch；纯 chore 不需要。
 - 发版：统一走宿主实例发布链（宿主工作区根 `bun run release`，koishi-scripts：version → build → publish；预演用 `bun run release:dryrun`），npm 凭证由宿主环境提供；仓内 `bun run release`（changeset version → build → changeset publish）仅为独立检出时的备用链。
 
-## git 提交流程
+## git 提交流程（PR only —— 禁止直推 main）
 
-1. 先跑 `bun run check` 确认全绿再提交。
-2. `git add -A` 后提交，简体中文提交信息（`feat:` / `fix:` / `docs:` / `chore:`）。
-3. 主分支 `main` 直提；完成后向用户简要说明改动与提交哈希。
+**铁律：本仓一切改动都走 PR，任何 AI / agent 都不得直接推送 `main`。** 这是流程要求，不以「有没有技术拦截」为条件——`main` 正由仓库 ruleset「保护主分支」约束（PR / 签名 / merge queue / 必需状态检查；建置顺序见 `docs/decisions/services-modernization.md`），但被 bypass 放行、甚至保护尚未生效时，改动再小也不例外（唯一例外是发布链的版本提交，见「Changesets 工作流」节）。
+
+1. 从最新 `main` 切出改动分支：`git switch -c <type>/<范围>`（`type` 取 `feat` / `fix` / `docs` / `chore` / `build` / `refactor`）。
+2. 先跑 `bun run check` 确认全绿再提交（**门禁与提交务必拆成两条命令，勿用 `&&` 串联**：`bun run check | tail` 的退出码是 `tail` 的，会把红灯当成绿灯）。涉及构建改动加跑 `bun run build`。
+3. 在分支上提交（可小步多次）：`git add -A` 后提交，简体中文提交信息（`feat:` / `fix:` / `docs:` / `chore:` / `build:`，可带 scope 如 `fix(core):`）。
+4. 推分支并开 PR：`git push -u origin <分支>` → `gh pr create`，正文按 `.github/PULL_REQUEST_TEMPLATE/` 下对应领域的模板写全（含实跑证据）。**禁止 `git push origin main`，禁止对 `main` 强推。**
+5. 等 CI 全绿后停在 ready 状态，把 PR 链接与验证证据汇报给用户，由用户合并；**AI 不自行合并**（用户明确指示合并时按指示办）。
+6. PR 合并后同步本地：`git switch main` → `git pull --ff-only` → 删除已合并的本地 / 远程分支，再汇报最终状态。
