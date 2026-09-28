@@ -155,7 +155,10 @@ function assertNoForbiddenProtocols(): void {
 
 /** 某包的已发布版本集合；包从未发布过时返回空集（404 不是错误）。 */
 async function publishedVersions(name: string): Promise<Set<string>> {
-    const response = await fetch(`${REGISTRY}/${name.replace("/", "%2f")}`, {
+    // 作用域包的 `/` 必须整体转义（用 replaceAll 而非 replace——后者只换第一处；
+    // CodeQL 的 js/incomplete-sanitization 在 PR #9 上正是咬这里，属真实缺陷）。
+    const encoded = name.replaceAll("/", "%2f");
+    const response = await fetch(`${REGISTRY}/${encoded}`, {
         headers: { accept: "application/vnd.npm.install-v1+json" },
     });
     if (response.status === 404) return new Set();
