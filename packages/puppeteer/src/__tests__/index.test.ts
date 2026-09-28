@@ -46,12 +46,20 @@ const executable = (() => {
 })();
 
 describe.skipIf(!executable)("端到端集成（需本机浏览器）", () => {
-    // 30s：CI runner 冷启动 Chrome（spawn + CDP 握手 + 引导页）超过 bun
-    // 默认 5s hook/测试超时（ubuntu-latest 预装 Chrome，本组在 CI 上真跑）。
-    // --no-sandbox：GH runner（Ubuntu 23.10+）经 AppArmor 禁用了非特权
-    // userns，Chrome 无可用沙箱会 FATAL 退出（zygote_host_impl_linux.cc）；
-    // 测试环境统一关沙箱，不影响生产配置语义。
-    const e2eTimeout = 30_000;
+    // 60s + retry 1：CI 上这两条都是实证必需，不是保守取值。
+    // - 冷启动 Chrome（spawn + CDP 握手 + 引导页 goto）在 ubuntu-latest 上实测
+    //   10–25s，超过 bun 默认 5s hook/测试超时；而 runner 在跑 CodeQL 的
+    //   javascript-typescript 分析（与 gate 并行的另一个 job）时会更慢。
+    // - 2026-09-28 实证一次偶然红：同一个提交在 merge queue 那一遍绿、在 push main
+    //   那一遍红，失败形态是「beforeEach/afterEach hook timed out for this test」
+    //   30s 后报 `Protocol error: Connection closed`（canvas.ts 的 start 收尾），
+    //   61 pass / 1 fail。门禁必须抗住偶发红——队列会对偶发红直接剔单。
+    //   retry 只作用于 e2e 组；断言类用例不加 retry，避免掩盖真实缺陷。
+    // - --no-sandbox：GH runner（Ubuntu 23.10+）经 AppArmor 禁用了非特权
+    //   userns，Chrome 无可用沙箱会 FATAL 退出（zygote_host_impl_linux.cc）；
+    //   测试环境统一关沙箱，不影响生产配置语义。
+    const e2eTimeout = 60_000;
+    const e2eOptions = { timeout: e2eTimeout, retry: 1 } as const;
     const app = new Context();
     app.plugin(HTTP);
     app.plugin(puppeteerPlugin, {
@@ -61,11 +69,11 @@ describe.skipIf(!executable)("端到端集成（需本机浏览器）", () => {
 
     beforeAll(async () => {
         await app.start();
-    }, e2eTimeout);
+    }, e2eOptions);
 
     afterAll(async () => {
         await app.stop();
-    }, e2eTimeout);
+    }, e2eOptions);
 
     it(
         "服务就绪后注入完成",
@@ -73,7 +81,7 @@ describe.skipIf(!executable)("端到端集成（需本机浏览器）", () => {
             expect(app.puppeteer).toBeInstanceOf(Puppeteer);
             expect(app.canvas).toBeDefined();
         },
-        e2eTimeout,
+        e2eOptions,
     );
 
     it(
@@ -83,7 +91,7 @@ describe.skipIf(!executable)("端到端集成（需本机浏览器）", () => {
             expect(svg.width).toBe(30);
             expect(svg.height).toBe(40);
         },
-        e2eTimeout,
+        e2eOptions,
     );
 
     it(
@@ -99,7 +107,7 @@ describe.skipIf(!executable)("端到端集成（需本机浏览器）", () => {
                 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
             ]);
         },
-        e2eTimeout,
+        e2eOptions,
     );
 
     it(
@@ -114,7 +122,7 @@ describe.skipIf(!executable)("端到端集成（需本机浏览器）", () => {
             expect([...buffer.subarray(0, 4)]).toEqual([0x89, 0x50, 0x4e, 0x47]);
             await canvas.dispose();
         },
-        e2eTimeout,
+        e2eOptions,
     );
 
     it(
@@ -126,7 +134,7 @@ describe.skipIf(!executable)("端到端集成（需本机浏览器）", () => {
             });
             expect(image.toString()).toContain("data:image/png;base64,");
         },
-        e2eTimeout,
+        e2eOptions,
     );
 
     it(
@@ -142,7 +150,7 @@ describe.skipIf(!executable)("端到端集成（需本机浏览器）", () => {
             expect(image.naturalHeight).toBe(1);
             await image.dispose();
         },
-        e2eTimeout,
+        e2eOptions,
     );
 
     it(
@@ -153,7 +161,7 @@ describe.skipIf(!executable)("端到端集成（需本机浏览器）", () => {
             const image = await svg.render(app);
             expect(image.toString()).toContain("data:image/png;base64,");
         },
-        e2eTimeout,
+        e2eOptions,
     );
 
     it(
@@ -166,6 +174,6 @@ describe.skipIf(!executable)("端到端集成（需本机浏览器）", () => {
             await expect(puppeteerService.page()).rejects.toThrow("尚未就绪");
             await expect(canvasService.createCanvas(1, 1)).rejects.toThrow("常驻页尚未就绪");
         },
-        e2eTimeout,
+        e2eOptions,
     );
 });
