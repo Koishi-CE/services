@@ -60,7 +60,12 @@
     },
     "locales": [
       "zh",
-      "en"
+      "zh-TW",
+      "en",
+      "ja",
+      "fr",
+      "de",
+      "ru"
     ]
   },
   "peerDependencies": {
