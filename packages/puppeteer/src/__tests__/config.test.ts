@@ -2,7 +2,13 @@
 // Copyright (c) 2026-present Oppenheymu and Koishi-CE contributors.
 
 import { describe, expect, it } from "bun:test";
-import { buildLaunchOptions, defaultArgs, defaultConfig, defaultViewport } from "../config.ts";
+import {
+    buildLaunchOptions,
+    defaultArgs,
+    defaultConfig,
+    defaultTimeout,
+    defaultViewport,
+} from "../config.ts";
 
 describe("配置与启动参数映射", () => {
     it("默认配置与上游 schema 默认值一致", () => {
@@ -15,6 +21,9 @@ describe("配置与启动参数映射", () => {
         });
         expect(defaultViewport).toEqual({ width: 1280, height: 768, deviceScaleFactor: 2 });
         expect(defaultConfig.executablePath).toBeUndefined();
+        // 与 puppeteer-core 的 launch.timeout 默认值对齐（30s）
+        expect(defaultTimeout).toBe(30_000);
+        expect(defaultConfig.timeout).toBe(defaultTimeout);
     });
 
     it("defaultArgs 在非 root 环境为空数组", () => {
@@ -30,6 +39,7 @@ describe("配置与启动参数映射", () => {
                 args: ["--a=1"],
                 defaultViewport: { width: 800, height: 600, deviceScaleFactor: 1 },
                 ignoreHTTPSErrors: true,
+                timeout: 45_000,
             },
             "/custom/chrome",
             ["--a=1", "--b=2"],
@@ -39,6 +49,7 @@ describe("配置与启动参数映射", () => {
             args: ["--a=1", "--b=2"],
             headless: false,
             ignoreHTTPSErrors: true,
+            timeout: 45_000,
             defaultViewport: { width: 800, height: 600, deviceScaleFactor: 1 },
         });
     });
@@ -51,6 +62,7 @@ describe("配置与启动参数映射", () => {
                 args,
                 defaultViewport,
                 ignoreHTTPSErrors: false,
+                timeout: defaultTimeout,
             },
             "/chrome",
             args,

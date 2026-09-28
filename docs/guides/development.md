@@ -147,7 +147,7 @@ await app.start();
 
 - **测试依赖注入**用 `@koishi-ce/plugin-mock`（`app.mock.client(...)` / `app.mock.initUser(...)`）+ `@koishi-ce/plugin-database-memory`；两者放包内 `devDependencies`。
 - **文件放置**随所在包：`am-i-alt` / `cron` 贴被测模块（`src/*.test.ts`）；`puppeteer` 因模块多而收进 `src/__tests__/`。
-- **端到端（真实浏览器）**：`packages/puppeteer/src/__tests__/index.test.ts` 的浏览器组用 `describe.skipIf(!executable)` 包裹，本机探测到浏览器（如 `msedge.exe`）才真跑；CI runner 有 `/usr/bin/chromium`，故 CI 上真跑。该组是耗时的绝对大头（冷启动 Chrome 占绝大部分），故超时预算给了 60s 并对每个用例与 hook 加了 `{ retry: 1 }`——改动它前先读该文件顶部注释里的两次 flake 记录。
+- **端到端（真实浏览器）**：`packages/puppeteer/src/__tests__/index.test.ts` 的浏览器组用 `describe.skipIf(!executable)` 包裹，本机探测到浏览器（如 `msedge.exe`）才真跑；CI runner 有 `/usr/bin/chromium`，故 CI 上真跑。该组是耗时的绝对大头（冷启动 Chrome 占绝大部分），且**有三个各管一段的超时**：插件 `Config.timeout`（默认 30000，puppeteer 内部等 WS endpoint 的上限，bun 管不到它）、bun 的 hook / 用例预算（须大于前者）、`{ retry: 1 }`（只重跑单个用例，不重跑 `beforeAll`）——e2e 组现用 120s + 150s，改动它前先读该文件顶部注释里的三次 flake 记录与 [第 8 节第 8 条](#8-已知坑历史经验别再踩)。
 - **`.yml` 词典在测试中可直接 import**（Bun 原生支持）。
 - **不要拿 `ctx.i18n.locales` 写「七语种齐全」的断言**：该属性对每个语言前缀只保留一个变体（`zh` 组下只会出现 `zh-CN` 或 `zh-TW` 之一且随执行顺序漂移），断言必假红；语种齐全由 `check:locales` 静态承担（该结论有四类探针的实测记录，见 `packages/am-i-alt/src/index.test.ts` 末尾注释）。
 
@@ -160,7 +160,10 @@ await app.start();
 5. **`ctx.i18n.locales` 不保证含全部语种变体**（见第 7 节末条），不要用它做语种齐全断言。
 6. **阶段 6 会放松两条 lint 强度**：为对齐旗舰仓口径，`nursery.noFloatingPromises`（现为 error）与 `complexity.useLiteralKeys`（现报 13 条 info）会关闭。`useLiteralKeys` 的关闭同时解掉一个死结：按它的建议改成点访问会撞 tsconfig 的 `noPropertyAccessFromIndexSignature`（TS4111，已实测复现）。这是「与旗舰仓口径一致」的自觉取舍，不是遗漏。
 7. **`am-i-alt` 的端口语种曾长期不生效**：7 个 yml 里曾有 5 个从未被 import（运行时不注册、产物里也没有）。修法即补齐 import；防回归由 `check:locales` 的「存在但未 import」对账承担——**新增语种文件后必须 import 并在 `apply()` 里 `ctx.i18n.define`**。
-8. **`packages/puppeteer` 的 e2e 在 CI 上偶发红**：根因是 30s 超时被冷启动 Chrome 吃满（曾两次把 PR 踢出 merge queue）。现为 60s + `retry: 1`。若再次打满，下一步是给 e2e 拆独立 job（即重新评估「不拆 job」的决策），而不是继续加超时。
+8. **`packages/puppeteer` 的 e2e 在 CI 上偶发红，但踩的是两个不同的 30s，别混为一谈**：
+   - **bun 的 30s hook 预算**被冷启动 Chrome 吃满（2026-09-28 那次，现场报 `beforeEach/afterEach hook timed out`，同一个提交在 merge queue 绿、push main 红）→ 预算提到 60s。
+   - **puppeteer 自己的 `launch.timeout`**：`buildLaunchOptions()` 原先不透传 `timeout`，等于钉死 puppeteer 默认的 30000（`ProductLauncher` 里 `timeout = 30000`），等不到 WS endpoint 就抛 `Timed out after 30000 ms while waiting for the WS endpoint URL to appear in stdout!`。**这一段不受 bun 的预算约束**，`retry: 1` 也不重跑 `beforeAll`（`beforeAll` 一挂就是全组秒红）。2026-09-28 15:51 那次 CI 红即此形态（同一棵树 15:40 那次 `app.start` 10.4s、15:50 那次 35.9s，擦边过关）→ 修法是 `Config` 新增 `timeout`（默认 30000，与上游 `LaunchOptions` 对齐）并由 e2e 组显式设 120s，bun 预算同步抬到 150s。
+   - 下次再红的判据：报 `hook timed out` 才是 bun 预算不够，那才轮到「给 e2e 拆独立 job」（重新评估「不拆 job」的决策）；若又是上面第二种形态，先拿 runner 侧证据（`chrome executable found` 到首个 e2e 用例通过的时间差）判断 120s 是否还不够，而不是盲目加数。
 9. **写临时探针文件后必须删干净**：提交前用 `git status --short` 与全局搜索确认无残留；负例测试（故意注入违规验证门禁会红）尤其容易漏。
 10. **`readme.md` 的大小写在 Windows 上不可见**：git 索引里的文件名曾是小写 `readme.md`，而工作区显示 `README.md`（大小写不敏感文件系统掩盖差异），Linux / macOS 检出后按 `README.md` 取文件的工具会失败。修正用 `git mv -f readme.md README.md` 或 `git rm --cached readme.md && git add README.md`，并在 `git ls-files` 里核实。
 11. **`fallow` 的豁免是包名级全局的、且 manifest 级发现只认配置豁免**：源文件里的 `// fallow-ignore-next-line` 对「未使用的 devDependency」这类 manifest-owned 发现**无效**（实测），必须落在 `.fallowrc.jsonc` 的 `ignoreDependencies` 并附理由。另：`toolingDependencies` 只存在于「插件定义」里（顶层没有该字段），且顶层 `plugins` 是**路径数组**而非定义对象。

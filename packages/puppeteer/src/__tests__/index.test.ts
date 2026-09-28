@@ -46,25 +46,32 @@ const executable = (() => {
 })();
 
 describe.skipIf(!executable)("端到端集成（需本机浏览器）", () => {
-    // 60s + retry 1：CI 上这两条都是实证必需，不是保守取值。
-    // - 冷启动 Chrome（spawn + CDP 握手 + 引导页 goto）在 ubuntu-latest 上实测
-    //   10–25s，超过 bun 默认 5s hook/测试超时；而 runner 在跑 CodeQL 的
-    //   javascript-typescript 分析（与 gate 并行的另一个 job）时会更慢。
-    // - 2026-09-28 实证一次偶然红：同一个提交在 merge queue 那一遍绿、在 push main
-    //   那一遍红，失败形态是「beforeEach/afterEach hook timed out for this test」
-    //   30s 后报 `Protocol error: Connection closed`（canvas.ts 的 start 收尾），
-    //   61 pass / 1 fail。门禁必须抗住偶发红——队列会对偶发红直接剔单。
-    //   retry 只作用于 e2e 组；断言类用例不加 retry，避免掩盖真实缺陷。
+    // 三重预算，别再加错地方——三个超时各管一段，改前先读这段：
+    // - `launchTimeoutMs`（= 插件 Config.timeout）：交给 puppeteer 自己。它的
+    //   `launch()` 默认只等 30s（puppeteer-core 的 ProductLauncher 里
+    //   `timeout = 30000`）就抛 "Timed out after 30000 ms while waiting for the
+    //   WS endpoint URL to appear in stdout!"。这一段**不受 bun 的 timeout 约束**，
+    //   bun 预算给多大都救不了它：2026-09-28 15:51 的 CI 红就是这个形态
+    //   （同一棵树 15:40 那次 app.start 只花 10.4s、15:50 那次花了 35.9s，
+    //   runner 之间的速度差足以把 30s 打满）。给 120s 是相对实测最慢的余量。
+    // - `e2eTimeout`（= bun 的 hook / 用例预算）必须**大于** `launchTimeoutMs`，
+    //   否则 bun 先杀 hook，现场的报错会退化成 "hook timed out" 而不是上一条可读信息。
+    // - 更早的一次偶发红（2026-09-28，merge queue 那遍绿、push main 那遍红，
+    //   61 pass / 1 fail）是 bun 的 30s hook 预算被冷启动吃满，故从 30s 提到 60s。
+    //   `retry: 1` 只重跑单个用例，**不重跑 beforeAll**——beforeAll 一挂，全组立即秒红，
+    //   所以 e2e 的抗抖动主要靠上面两个预算，而不是靠 retry。
     // - --no-sandbox：GH runner（Ubuntu 23.10+）经 AppArmor 禁用了非特权
     //   userns，Chrome 无可用沙箱会 FATAL 退出（zygote_host_impl_linux.cc）；
     //   测试环境统一关沙箱，不影响生产配置语义。
-    const e2eTimeout = 60_000;
+    const launchTimeoutMs = 120_000;
+    const e2eTimeout = 150_000;
     const e2eOptions = { timeout: e2eTimeout, retry: 1 } as const;
     const app = new Context();
     app.plugin(HTTP);
     app.plugin(puppeteerPlugin, {
         ...defaultConfig,
         args: [...defaultConfig.args, "--no-sandbox"],
+        timeout: launchTimeoutMs,
     });
 
     beforeAll(async () => {

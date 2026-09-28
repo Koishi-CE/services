@@ -61,7 +61,7 @@ bun run format       # biome format --write .
 - `biome.json` 不能写注释（会静默丢 `overrides`）。
 - `ctx.i18n.locales` 对每个语言前缀只保留一个变体，不要拿它写「七语种齐全」断言（必假红）。
 - `am-i-alt` 的端口语种曾因漏 import 而长期不生效；产物 `lib/assets/` 的 yml 数量是权威判据。
-- `puppeteer` 的 e2e 组在 CI 上真跑（runner 有 `/usr/bin/chromium`），冷启动 Chrome 是耗时大头，超时预算已放宽到 60s + `retry: 1`。
+- `puppeteer` 的 e2e 组在 CI 上真跑（runner 有 `/usr/bin/chromium`），冷启动 Chrome 是耗时大头。**三个超时各管一段**：插件 `Config.timeout`（默认 30s，puppeteer 内部等 WS endpoint 的上限，bun 的预算管不到它）、bun 的 hook / 用例预算（现 150s，须大于前者）、`retry: 1`（只重跑单个用例，**不重跑 `beforeAll`**）；e2e 组现用 120s + 150s。
 - TS7 的 buildinfo 错误回声：引入增量构建后，改根 tsconfig / 依赖结构要先删 `*.tsbuildinfo` 再跑。
 - `readme.md` 的大小写在 Windows 上不可见（git 索引里曾是小写），Linux / macOS 检出的工具会踩；改名用 `git mv -f` 并在 `git ls-files` 里核实。
 - fallow 的豁免是包名级全局的，且 manifest 级发现（如未使用的 devDependency）**只认配置豁免**，源文件内联抑制注释无效。

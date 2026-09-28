@@ -56,6 +56,7 @@ h("html", { lang: "zh-CN", selector: "#target", timeout: 5000 }, [
 | `executablePath` | 自动探测 | 浏览器可执行文件路径；缺省时经 puppeteer-finder 自动寻找 Chrome / Edge |
 | `headless` | `true` | 是否开启无头模式 |
 | `args` | `[]`（root 下 `["--no-sandbox"]`） | 额外的浏览器启动参数 |
+| `timeout` | `30000` | 等待浏览器启动的最长时间（毫秒）；冷启动较慢的环境（CI、低配容器、无缓存首跑）可调大 |
 | `defaultViewport` | `1280×768, deviceScaleFactor: 2` | 默认视图尺寸与缩放 |
 | `ignoreHTTPSErrors` | `false` | 导航时忽略 HTTPS 错误 |
 
