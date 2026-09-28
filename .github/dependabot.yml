@@ -1,0 +1,98 @@
+# Dependabot 依赖更新配置
+#
+# 存在的理由（与 .github/workflows/ci.yml 的注释互为引用）：第三方 Action 一律钉到
+# commit SHA，钉死之后必须有人负责前移——Dependabot 的 github-actions 条目会自动跟随
+# 新版本，并同时改写 SHA 与 `# vX.Y.Z` 注释（否则 `actions/unpinned-tag` 那条 CodeQL
+# 告警会以另一种形式回来：要么钉死的 SHA 长期不更新，要么被手工改成可变 tag）。
+# ruleset 的 code_scanning 规则阈值是 `all`，所以这条不是洁癖而是门禁要求。
+#
+# 生态口径（GitHub 官方支持矩阵，2026-09 核对）：
+#   - github-actions：version updates / security updates 均支持。
+#   - bun：仅认**文本** `bun.lock`（需 Bun ≥ 1.1.39），且 **security updates 不支持**
+#     （version updates 支持）。故本仓 bun 依赖的漏洞不会自动出 PR，安全面须人工跟进；
+#     前置条件已满足：`packageManager` 钉 `bun@1.4.2`，根 `bun.lock` 为 `lockfileVersion: 2`。
+#     另注：本仓的 Dependabot alerts（漏洞告警）本身也未开启，属仓库设置项，与本文件无关。
+#
+# 本仓结构：bun workspaces 单锁文件（根 `bun.lock` 统管 `packages/*`），故只配根目录一个
+# bun 条目；若日后实测发现某个成员包的依赖未被覆盖，再按 `packages/<name>` 补条目。
+#
+# Dependabot 的 bun PR 会命中 ci.yml 里那条「锁文件格式守门」step：其 updater 镜像内的 Bun
+# 版本不跟随仓库 `packageManager`，会把 `bun.lock` 静默降级重写（dependabot-core#15848 / #15897）。
+#
+# 分组策略：只把 minor / patch 归组（减少 CI 轮次）；major 由下方 ignore 整体压制，
+# 需要结构性升版时人工发起。注意 ignore 的 `version-update:semver-major` 不作用于
+# security updates——而 bun 生态本就不支持 security updates，故本仓 bun 侧不受影响。
+#
+# 依赖类改动属纯 chore，按 AGENTS.md 无需 changeset。
+
+version: 2
+
+updates:
+  # ---- 第三方 Action 的 SHA 前移 ----
+  # 本仓 ci.yml 里的三个 action 全部钉到 40 位 commit SHA；本条目负责让它们持续前进。
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Shanghai
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: build
+      include: scope
+    labels:
+      - "Area: Upstream"
+    assignees:
+      - "Oppenheymu"
+    groups:
+      actions-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  # ---- 根 devDependencies 与各成员包依赖（经根锁文件） ----
+  - package-ecosystem: bun
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Shanghai
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: chore
+      include: scope
+    labels:
+      - "Area: Bun"
+    assignees:
+      - "Oppenheymu"
+    groups:
+      bun-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+    ignore:
+      # ① CE 自发布生态：@koishi-ce/koishi（宿主框架，peer ^1.0.0 + devDep 跟版）与
+      #    @koishi-ce/plugin-mock / plugin-database-memory / plugin-http /
+      #    plugin-proxy-agent（测试期注入用）。这些是**刻意**与宿主线对齐的版本，
+      #    交给机器人按 semver 漂移会破坏 peer 契约与测试注入的前提。
+      - dependency-name: "@koishi-ce/*"
+      # ② npm: alias 形态的依赖：`"@typescript/native": "npm:typescript@7.0.2"` 的
+      #    alias 左侧是包名、右侧才是真包。Dependabot 对 alias 的重写会拆掉整条
+      #    TS7 类型检查链（本仓 typecheck 完全依赖它），故整体冻结，升级走人工改。
+      - dependency-name: "@typescript/native"
+      # ③ bun-types 必须与 packageManager 钉定的 Bun 版本同线（现为 1.4.2）：
+      #    @types/bun 的类型面本就超前于运行时（已列入已知坑），跟随漂移会让
+      #    「类型说有、运行时没有」的坑变多变深。升级与 Bun 升级同批人工做。
+      - dependency-name: "bun-types"
+      # ④ 全局：major 升版一律人工评估——即版本更新**不会**为 major 出 PR
+      #    （不是「单独出一个 PR」：组只含 minor/patch，再叠加本条 ignore，
+      #    version update 形态的 major 被完全压制）。需要结构性升版时人工发起。
+      #    参照仓 koishi 的 dependabot.yml 同此口径。
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
