@@ -1,6 +1,17 @@
 # CI 门禁流水线
 #
-# 单个 job `gate`：安装 → lint → 类型检查 → 测试 → 构建 → 测试（覆盖率）→ 上传。
+# 两个并行 job：
+# - gate   主门禁：安装 → lint → 类型检查 → 测试 → 构建 → 覆盖率 → 上传。
+#          其中 lint / typecheck / test 与自研门禁五连（check:locales 等）逐条
+#          对应本地 `bun run check` 的构成——两处口径必须逐字一致，否则会出现
+#          「本地绿、CI 红」或反过来的假象。改动任一侧都要同步另一侧。
+# - fallow 死代码与依赖审计：bunx 直跑，不进 devDependencies；版本在根
+#          package.json 的 fallow 脚本内 pin 到精确版（3.25.0），避免门禁口径
+#          随上游发布漂移。豁免与规则见根 .fallowrc.jsonc 与 .fallowrc.plugins.jsonc
+#          （每条例外都附理由）。**刻意不并入 gate 的 check 链**：fallow 经 bunx
+#          拉取，离线或网络抖动时会让主门禁红在「与代码无关」的地方；两个 job
+#          各自独立上报，ruleset 里两个都要作为必需状态检查。
+#
 # job 名即主分支 ruleset「保护主分支」（id 24119346）里填的必需状态检查名
 # （**ruleset 只认 job 名**，不含 workflow 名、矩阵与事件类型），改动此处须同步 ruleset。
 #
@@ -87,6 +98,17 @@ jobs:
         run: bun run typecheck
       - name: 测试（bun:test）
         run: bun test
+      # 自研门禁五连（tooling/checks/*）：词典 / 包纪律 / 文档链接 / PR 模板 /
+      # SPDX 头。逐条与本地 `bun run check` 的构成对应，不合并成一条
+      # `bun run check` 是为了让错误直接落在对应的步骤名上。
+      # 新增或删除自研门禁时必须同步根 package.json 的 check 链与本段。
+      - name: 自研门禁（tooling/checks）
+        run: |
+          bun run check:locales
+          bun run check:packages
+          bun run check:docs-links
+          bun run check:pr-templates
+          bun run check:spdx
       - name: 构建（按包 tsdown）
         run: bun run build
       # 覆盖率单独跑一遍、而非给上一步加旗标：让 CI 的「测试」与本地门禁
@@ -101,3 +123,19 @@ jobs:
           files: coverage/lcov.info
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
+
+  # 死代码与依赖审计。与 gate 并行且互不依赖：审计只需要源码与 package.json，
+  # 不需要构建产物（fallow 从 tsconfig / package.json / 源码静态图分析）。
+  # 刻意**不**跑 bun run build：本仓 tsconfig 的 paths 指向各包 src 源码，
+  # 干净检出（无 lib/）下 fallow 的解析结果与本地一致；反过来若 CI 先构建，
+  # 产物 lib/*.d.ts 会让判定口径与本地「未构建」状态漂移。
+  fallow:
+    name: fallow (dead code & deps audit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      - run: bun install
+      - name: 死代码与依赖审计（fallow，版本 pin 在根 package.json）
+        run: bun run fallow
