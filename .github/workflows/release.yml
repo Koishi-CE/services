@@ -1,0 +1,178 @@
+# 发布链（OIDC 可信发布）
+#
+# 触发：携带 changeset 的 PR 合并进 main 后自动消费并发布；`workflow_dispatch` 作补发 /
+# 重跑逃生舱。`concurrency` 不取消进行中的运行——两个运行同时消费 changeset 会撞版本号。
+#
+# 两个 job 的职责与权限刻意切开（改本文件前先读 docs/process/release.md 第 2 与第 7 节）：
+#   prepare  contents: write  →  消费 changeset → 构建 → 测试 → 推版本提交 → 打包 artifact
+#                                **不挂 environment**，**无** id-token，**不用**发布凭证
+#   publish  id-token: write + environment: release  →  解包 → 逐包 npm publish
+#                                **无** contents: write，**不跑** bun install
+#
+# 为什么 publish 不跑 bun install：install / build 是构建期代码执行的主要入口，而 publish
+# 持有 OIDC token（能换到 npm 的包级发布凭证）。发布脚本只用 node: 内建模块与 npm CLI，
+# 解包后的产物自带全部文件，故这里不需要 node_modules——把执行面缩到最小。
+#
+# 为什么消费 changeset 与构建同处 prepare：早先拆成两个 job、由 version 输出提交 SHA 供
+# build 用 `actions/checkout` 的 `ref:` 检出，会被 CodeQL 判 actions/cache-poisoning
+# （「可被 workflow_dispatch 影响的 ref 被特权 job 检出并执行」，旗舰仓在该文件上稳定报
+# 3 条 high）。合成一个 job 后用默认 checkout，既消掉这个污点，也免掉 SHA 传递这笔状态。
+#
+# 为什么推送要用 GitHub App token：默认 GITHUB_TOKEN 推 main 会被 ruleset「保护主分支」
+# 以 GH013 拒绝，且它无法被加入 ruleset 的 bypass 名单（GitHub 的安全限制）——能进名单的
+# 只有 GitHub App，模式还必须是 `exempt` 或 `Always`。仓库侧的 App 凭据（variable
+# APP_CLIENT_ID / secret APP_PRIVATE_KEY）与 bypass 配置见 docs/process/release.md 第 1 节。
+#
+# 第三方 Action 一律钉到 commit SHA（附 `# vX.Y.Z` 注释供 Dependabot 与人工识别）：
+# ruleset 的 code_scanning 规则会把 `actions/unpinned-tag` 告警算作阻塞项。
+#
+# npm 侧走可信发布（Trusted Publisher / OIDC），全程无长期 token；三个包的信任配置
+# （repository / workflow 文件名 / environment 三个 claim）见 docs/process/release.md 第 7 节。
+
+name: Release
+
+on:
+  push:
+    branches: [main]
+    # 只有携带 changeset 的合并才值得跑；被消费的 changeset 以「删除」形式入库，
+    # 同样命中本过滤器（App token 推送不受 GITHUB_TOKEN 的「免触发」待遇，故那次
+    # 推送会再触发一次本 workflow——它消费不到 changeset，只跑 version 即空转退出）。
+    paths: [".changeset/**"]
+  workflow_dispatch:
+    inputs:
+      # changeset 一旦被消费，重跑就再也走不到 publish（version 环无条目可消费 →
+      # changed=false → publish 被跳过）；置 true 可跳过 version 环、直接构建当前 main
+      # 交给 publish，由 registry 比对决定哪些版本真的要发。不改变审批语义。
+      skip-version:
+        description: "跳过消费 changeset（补发 / 重跑时用）"
+        type: boolean
+        default: false
+
+concurrency:
+  group: release
+  # 不可取消：两个运行同时消费 changeset 会撞版本号。
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    name: prepare (version / build / test / push)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write # 推送版本提交
+    outputs:
+      changed: ${{ steps.version.outputs.changed }}
+    steps:
+      # persist-credentials: false 不可省：默认行为会把 GITHUB_TOKEN 持久化到
+      # .git/config 的 http.<url>.extraheader，与后面推送 URL 里的 App token 争同一个
+      # Authorization 头。
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      - run: bun install
+
+      # GitHub App installation token：取 token 用 client-id 输入而非 app-id（v3 的
+      # action.yml 已把后者标为 deprecated）。Client ID 不是秘密（它本就出现在 App 的
+      # 安装 URL 里），故按官方示例放 repository variable 而非 secret。
+      - name: 取 App token（推送版本提交用）
+        id: app-token
+        if: ${{ !inputs.skip-version }}
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          # 显式限定仓库，不依赖默认值（默认覆盖该 App 安装到的全部仓库）。
+          repositories: services
+
+      # 1) 消费 changeset。输出 changed 供后续步骤判定；无条目时为空转，不算失败。
+      - name: 消费 changeset（version）
+        id: version
+        if: ${{ !inputs.skip-version }}
+        run: |
+          bun run release version
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "无 changeset 可消费，后续步骤将跳过。"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # 2) 构建与测试跑在「版本已升」的这棵树上；顺序刻意排在推送之前——这样构建或测试
+      #    失败时，main 上不会留下「版本已升、包却没发出去」的提交。
+      - name: 按包构建
+        if: steps.version.outputs.changed == 'true'
+        run: bun run release build
+      - name: 测试（与门禁同口径）
+        if: steps.version.outputs.changed == 'true'
+        run: bun run release test
+
+      # 3) 推送版本提交。token 经 env 传递（内联进 run 会把明文写进日志），推送用完整 URL
+      #    而非 git remote，并加 -c core.hooksPath=/dev/null：构建期代码被污染时可在
+      #    .git/hooks/pre-push 里读到这个 token。
+      - name: 推送版本提交
+        if: steps.version.outputs.changed == 'true'
+        env:
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          git config user.name "Oppenheymu"
+          git config user.email "oppenheymu@gmail.com"
+          git add -A
+          git commit -m "chore(release): 消费 changeset 并更新版本"
+          git -c core.hooksPath=/dev/null push "https://x-access-token:${APP_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:main
+
+      # 4) 打包发布物。npm publish 自己生成 tarball，这里只是把「要发布的树」传给 publish
+      #    job——用 artifact 而不是跨 job 传 SHA，避免给特权 job 一个可被 dispatch 影响的 ref。
+      - name: 打包发布物（tarball）
+        if: steps.version.outputs.changed == 'true'
+        run: |
+          mkdir -p release-artifacts
+          for dir in packages/*; do
+            (cd "$dir" && npm pack --pack-destination "$GITHUB_WORKSPACE/release-artifacts")
+          done
+          ls -l release-artifacts
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: steps.version.outputs.changed == 'true'
+        with:
+          name: release-artifacts
+          path: release-artifacts/*.tgz
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: publish (npm OIDC)
+    needs: prepare
+    if: needs.prepare.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # 对象形式：简写在部分 schema 版本下会被编辑器误报。environment 名必须与 npm 信任
+    # 配置里的 environment claim **严格同名**，且该 environment 的 Deployment branches
+    # 必须限制为 main（否则有写权限者可在分支上改本文件后 dispatch 借它拿到 OIDC）。
+    environment:
+      name: release
+    permissions:
+      contents: read # 只读：本 job 不推任何东西
+      id-token: write # OIDC 换 npm 的包级发布凭证
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-artifacts
+          path: release-artifacts
+      # 系统级 prefix（/usr/local，属 root）写不进去：npm install -g npm@11 会因
+      # /usr/local/share/man 而 EACCES（旗舰仓实测 exit 243）。装进用户级 prefix 并把
+      # 其 bin 写进 GITHUB_PATH——后者只对后续步骤生效，故安装与写 PATH 必须在同一步。
+      # OIDC 可信发布需 npm ≥ 11.5.1。
+      - name: 升级 npm（用户级 prefix）
+        run: |
+          npm install -g npm@11 --prefix "$HOME/.npm-global"
+          echo "$HOME/.npm-global/bin" >> "$GITHUB_PATH"
+      # 逐包发布与 registry 比对复用仓库内的发布脚本（它只用 node: 内建模块与 npm CLI，
+      # 不需要 node_modules）。`--from-tarballs` 发的是 prepare job 打好的那份 tarball
+      # ——发布物与构建产物逐字同一份。**刻意不跑 bun install**：install 是构建期代码执行
+      # 的入口，而本 job 持有 OIDC token。
+      - name: 逐包发布（registry 比对后）
+        run: bun tooling/release/index.ts publish --from-tarballs release-artifacts

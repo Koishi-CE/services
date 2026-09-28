@@ -41,7 +41,9 @@
 /AGENTS.md                          @Oppenheymu @PaperKoi
 
 # 门面文件：对外首屏（README）与许可声明，改动影响发布面观感与法律声明。
-/readme.md                          @Oppenheymu @PaperKoi
+# 文件名用大写 README.md：2026-09-28 已用 `git mv -f readme.md README.md` 修正索引大小写
+# （Windows 大小写不敏感会掩盖差异，Linux / macOS 检出后才暴露）。不要写回小写。
+/README.md                          @Oppenheymu @PaperKoi
 /LICENSE                            @Oppenheymu @PaperKoi
 
 # 门禁自研脚本：与 CI 同属「门禁执行面」，改它等于改哪些步骤算通过。
@@ -59,6 +61,7 @@
 /.gitattributes                     @Oppenheymu @PaperKoi
 /.gitignore                         @Oppenheymu @PaperKoi
 /.fallowrc.jsonc                    @Oppenheymu @PaperKoi
+/.fallowrc.plugins.jsonc            @Oppenheymu @PaperKoi
 /types/**                           @Oppenheymu @PaperKoi
 
 # 版本与发布面（changeset 条目直接决定发出去的版本号）

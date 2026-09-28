@@ -1,10 +1,25 @@
 # services 现代化改造计划书
 
-> **档案（决策记录，只读参考）** · 状态：待维护者批准后进入实施 · 起草日期 2026-09-28 · 依据：本仓与参照仓 `Koishi-CE/koishi` 的**实际代码与线上设置**（不采信任何转述）。
+> **档案（决策记录，只读参考）** · 状态：实施中（阶段 0–4 已落地，进度见下表）· 起草日期 2026-09-28 · 依据：本仓与参照仓 `Koishi-CE/koishi` 的**实际代码与线上设置**（不采信任何转述）。
 >
 > 目标：把本仓（`services`，3 个服务型插件包）的仓库保护、门禁、CI、发布、文档对齐到同组织旗舰仓 `Koishi-CE/koishi` 的**现行工程规矩**，同时保留本仓自身的事实——服务型插件集、3 个包、按包构建、七语种词典。
 >
 > 本文结构：1 现状底账 · 2 参照仓规矩 · 3 差距清单 · 4 分阶段计划 · 5 决策点（已裁定）· 6 验收标准 · 7 风险与依赖 · 8 待维护者执行的仓库设置清单。
+>
+> **实施进度（2026-09-28 更新）**：下文的「现状底账」（第 1 节）是**改造起点的快照**，不是今日实况——读它时请对照本表。
+>
+> | 阶段 | 状态 | 产物 / 证据 |
+> | --- | --- | --- |
+> | 0 计划书 | 已合并 | 本文（PR #1） |
+> | 1 CI 与锁文件基线 | 已合并 | `bun.lock`、`packageManager: bun@1.4.2`、`merge_group` 触发面、Codecov（PR #2 / #3） |
+> | 2 仓库设置 | 已完成（维护者执行） | ruleset「保护主分支」`24119346`、`release` environment、GitHub App 凭据；merge queue 已由 PR #3 实证 |
+> | 3 自研门禁与审计 | 已合并 | `tooling/checks/`（locales / packages / docs-links / pr-templates / spdx）、`.fallowrc.jsonc` + `.fallowrc.plugins.jsonc`、CI 的 `fallow` job（PR #7）；顺带修掉 fallow 报出的三处真死代码 |
+> | 4 文档与常驻指令 | 本 PR | `docs/{README,guides/development,reference/architecture,process/release}.md`、`AGENTS.md` 重写、`README.md`（含 G24 大小写修正）、`.github/CONTRIBUTING.md`、`.github/PULL_REQUEST_TEMPLATE/`（5 份模板 + `config.yml` + `README.md`） |
+> | 5 发布链迁到 CI | 未开始 | 见第 4 节阶段 5 |
+> | 6 风格对齐 | 未开始 | 见第 4 节阶段 6 |
+> | 7 收尾 | 部分完成 | merge queue 真实性验证已由 PR #7 实证（`gate` 与 `fallow` 都在 `gh-readonly-queue/main/pr-7-*` 上跑过并上报 success）；「改前 / 改后」数字与文档复核待阶段 5 / 6 落地后回填 |
+>
+> 各阶段的实施细节与相对本计划的偏差以对应 PR 正文为准（例如阶段 3 的 `check:spdx` 当前未覆盖 `tsdown.config.ts` 与 `types/yml.d.ts`，与计划第 6 条略有收窄，原因见 `tooling/README.md` 的「尚未纳入的检查」）。
 
 ---
 
@@ -233,6 +248,7 @@ bypass 名单：`RepositoryRole` id 5（admin）`always`；两个 `Integration`�
 
 - 验证：`bun run check` 全绿；push 后新 CI 在 `pull_request` 与（合并后）`merge_group` 两种事件下都上报 `gate`。
 - 出 PR，等维护者合并。
+- **实际落地**：PR #2 已合并（`4a44a4e`）。
 
 ### 阶段 2 · 仓库设置（**维护者执行**，顺序不可颠倒）
 
@@ -259,6 +275,7 @@ bypass 名单：`RepositoryRole` id 5（admin）`always`；两个 `Integration`�
 
 - 验证：逐脚本本地实跑并把输出摘要写进 PR；`bun run check` 全绿；CI 两个 job 全绿。
 - 出 PR，等维护者合并。合并后维护者把 `fallow (dead code & deps audit)` 追加进必需状态检查。
+- **实际落地**：PR #7 已合并（`9b654eb`）。相对计划的偏差有三处：① `check:spdx` 的第 6 条要求（覆盖 `packages/*/tsdown.config.ts` 与 `locales/*.yml`）**收窄为只覆盖已合规的两类**（`packages/*/src` 与 `tooling`），4 个缺头文件留作后续独立改动；② `fallow` 经 `.fallowrc.jsonc` + `.fallowrc.plugins.jsonc` 承载（`toolingDependencies` 只存在于插件定义里）；③ CI 把自研门禁五连列为 `gate` 内的独立 step，`fallow` 仍为独立 job。截至阶段 4 写作时，`fallow` **尚未**追加进必需状态检查。
 
 ### 阶段 4 · 文档与常驻指令
 
@@ -316,10 +333,12 @@ bypass 名单：`RepositoryRole` id 5（admin）`always`；两个 `Integration`�
 | 2b | 发布 App 的 bypass 模式 | **`exempt`**（与参照仓线上取值一致；提示词中的 `Always` 未采用） | 阶段 2 建 ruleset 时填 `exempt` |
 | 3 | 是否引入 Turborepo | **暂不引入** | 不新增 `turbo.jsonc` / `turbo` devDependency / `TURBO_TOKEN`；CODEOWNERS 无需该路径；「量化优先」——若阶段 7 的实测数字显示确有收益再单独立项 |
 | 4 | puppeteer 的 Chrome 测试是否拆 job | **不拆**，留在 `gate` 内 | CI 保持单 job（+ 阶段 3 的 `fallow`），无重复 install/build |
-| 5 | `koishi.locales` 声明口径 | **待维护者确认**（见下方说明） | 决定 `check:locales` / `check:packages` 的严格度 |
-| 6 | `am-i-alt` 的 5 个死语种文件（行为改动） | **待维护者确认**（见下方说明） | 决定是否补 import（新增 5 个语种的用户可见行为）还是删文件；须独立 PR + changeset |
+| 5 | `koishi.locales` 声明口径 | **A（已落地）**：声明 ⊆ 实际 + 有 `locales/` 就必须七语种齐全且键对齐 + 每个 `locales/*.yml` 必须被同包源码 import；`cron` 的声明已在阶段 3 期间删除（它没有词典） | `tooling/checks/locales.ts` 承担；三包现状均合规 |
+| 6 | `am-i-alt` 的 5 个死语种文件 | **A（已落地）**：补齐 import 让七语种真正生效（PR #5，2026-09-28 合并） | 产物 `lib/assets/` 现有 7 个 yml 拷贝物；防回归由 `check:locales` 的 import 对账承担 |
 
-### 决策点 5 说明（未裁定项之一）
+### 决策点 5 说明（已裁定为 A，保留推理过程）
+
+> 状态：2026-09-28 裁定为 **A**，并在阶段 3 落地（`tooling/checks/locales.ts`）；`cron` 的 `["zh"]` 声明也已删除（新规则下它指向不存在的词典，会直接报红）。下方为当时的候选与理由，保留供回溯。
 
 事实：参照仓线上惯例是**语言前缀**形态（`@koishi-ce/plugin-help` 声明 `["zh","en","ja","fr","zh-TW"]`，`plugin-bind` 声明 `["zh","en"]`），而本仓 `am-i-alt` 实际有 7 个语种文件却只声明 `["zh","en"]`，`cron` 声明 `["zh"]` 但完全没有词典文件，`puppeteer` 未声明。另注：该字段的**消费方未核实**（见 §1.5），故不应假设它有运行时语义。
 
@@ -331,7 +350,9 @@ bypass 名单：`RepositoryRole` id 5（admin）`always`；两个 `Integration`�
 
 请维护者裁定后在阶段 3 落地。
 
-### 决策点 6 说明（未裁定项之二 · 行为改动，须独立 PR）
+### 决策点 6 说明（已裁定为 A，保留推理过程）
+
+> 状态：2026-09-28 裁定为 **A**（补齐 import），由 PR #5 独立落地并已合并；`check:locales` 的 import 对账同期在阶段 3 实现（PR #7）。下方为当时的候选与理由，保留供回溯。
 
 事实：`packages/am-i-alt` 的 7 个语种文件里，**只有 zh-CN 与 en-US 被 `src/index.ts:81-82` 注册**，另外 5 个（`zh-TW` / `ja-JP` / `fr-FR` / `de-DE` / `ru-RU`）从未 import，因而运行时不生效、也不进产物。这属于**代码缺陷而非门禁问题**，且修它会产生用户可见行为变化（新增 5 个语种的界面/命令文案），因此**不与门禁改造混做**。
 
