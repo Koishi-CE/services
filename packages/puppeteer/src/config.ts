@@ -30,6 +30,8 @@ export interface Config {
     args: string[];
     defaultViewport: ViewportConfig;
     ignoreHTTPSErrors: boolean;
+    /** 等待浏览器启动的最长时间（毫秒） */
+    timeout: number;
 }
 
 export const defaultViewport: ViewportConfig = { width: 1280, height: 768, deviceScaleFactor: 2 };
@@ -39,11 +41,21 @@ export function defaultArgs(): string[] {
     return process.getuid?.() === 0 ? ["--no-sandbox"] : [];
 }
 
+/**
+ * 浏览器启动超时的默认值：与 puppeteer 自身的 `launch.timeout` 默认值一致
+ * （puppeteer-core 的 `BrowserLauncher.launch` 里 `timeout = 30000`）。
+ * 该值不应再被隐式吞掉——上游 Config 展开 `LaunchOptions` 时可传 `timeout`，
+ * 本包显式化后必须保留同一旋钮，否则冷启动慢的环境（CI、低配容器）
+ * 只能在 `start()` 处硬吃 30s 上限。
+ */
+export const defaultTimeout = 30_000;
+
 export const defaultConfig: Config = {
     headless: true,
     args: defaultArgs(),
     defaultViewport,
     ignoreHTTPSErrors: false,
+    timeout: defaultTimeout,
 };
 
 const ViewportSchema: Schema<ViewportConfig> = Schema.object({
@@ -66,6 +78,11 @@ export const Config: Schema<Config> = Schema.intersect([
                 "额外的浏览器参数。Chromium 参数可以参考[这个页面](https://peter.sh/experiments/chromium-command-line-switches/)。",
             )
             .default(defaultArgs()),
+        timeout: Schema.natural()
+            .description(
+                "等待浏览器启动的最长时间（毫秒）。冷启动较慢的环境（CI、低配容器、无缓存的首跑）可适当调大。",
+            )
+            .default(defaultTimeout),
     }).description("启动设置"),
     Schema.object({
         defaultViewport: ViewportSchema,
@@ -86,6 +103,7 @@ export function buildLaunchOptions(
         args: [...args],
         headless: config.headless,
         ignoreHTTPSErrors: config.ignoreHTTPSErrors,
+        timeout: config.timeout,
         defaultViewport: {
             width: config.defaultViewport.width,
             height: config.defaultViewport.height,

@@ -30,7 +30,13 @@ import { parseTimeout } from "./utils.ts";
 export type { Canvas, Canvas2DState, CanvasRenderingContext2D, Image } from "./canvas-service.ts";
 export { CanvasService } from "./canvas-service.ts";
 export type { ViewportConfig } from "./config.ts";
-export { buildLaunchOptions, defaultArgs, defaultConfig, defaultViewport } from "./config.ts";
+export {
+    buildLaunchOptions,
+    defaultArgs,
+    defaultConfig,
+    defaultTimeout,
+    defaultViewport,
+} from "./config.ts";
 export * from "./svg.ts";
 
 export const name = "puppeteer";
