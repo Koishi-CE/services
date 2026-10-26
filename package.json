@@ -30,7 +30,7 @@
     "release": "bun tooling/release/index.ts"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.15",
+    "@biomejs/biome": "^2.6.2",
     "@changesets/cli": "^2.31.1",
     "@types/node": "^26.6.5",
     "@typescript/native": "npm:typescript@7.0.2",
